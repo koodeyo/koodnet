@@ -1,0 +1,25 @@
+
+.PHONY: setup
+setup:
+	go install github.com/swaggo/swag/cmd/swag@latest
+	swag init -g ./cmd/server/main.go -o ./docs
+
+.PHONY: docker
+docker:
+	@docker build -t koodnet-server -f ./docker/Dockerfile.dev-koodnet-api .
+
+.PHONY: docker-xs
+docker-xs:
+	@docker build -t koodnet-server-xs -f ./docker/Dockerfile.dev-koodnet-api-xs .
+
+.PHONY: up
+up:
+	@docker compose -f docker-compose.yml up
+
+.PHONY: down
+down:
+	@docker compose -f docker-compose.yml down
+
+.PHONY: restart
+restart:
+	@docker compose restart

@@ -1,0 +1,10 @@
+services:
+  backend:
+    container_name: koodnet-api
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile.koodnet-api
+    ports:
+      - 8001:8001
+    volumes:
+      - .:/app

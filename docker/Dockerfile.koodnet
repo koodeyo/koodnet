@@ -1,0 +1,10 @@
+FROM gcr.io/distroless/static:latest
+
+ARG TARGETOS TARGETARCH
+COPY build/$TARGETOS-$TARGETARCH/koodnet /koodnet
+
+VOLUME ["/config"]
+
+ENTRYPOINT ["/koodnet"]
+# Allow users to override the args passed to koodnet
+CMD ["-config", "/config/config.yml"]

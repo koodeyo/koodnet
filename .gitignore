@@ -1,3 +1,16 @@
 .vscode
-bin
 .env
+.DS_Store
+/koodnet
+/koodnet-api
+/koodnet-arm
+/koodnet-arm6
+/koodnet-darwin
+/koodnet.exe
+/koodnet-api.exe
+/build
+/*.tar.gz
+**.crt
+**.key
+**.pem
+**.pub

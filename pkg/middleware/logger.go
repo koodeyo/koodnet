@@ -18,15 +18,22 @@ func Logger(logger *logrus.Logger) gin.HandlerFunc {
 		// End timer
 		duration := time.Since(start)
 
-		// Log the request details using logrus
-		logger.WithFields(logrus.Fields{
+		// Create log fields
+		logFields := logrus.Fields{
 			"method":     c.Request.Method,
 			"path":       c.Request.URL.Path,
 			"status":     c.Writer.Status(),
 			"duration":   duration,
 			"ip":         c.ClientIP(),
 			"user-agent": c.Request.UserAgent(),
-			"errors":     c.Errors.ByType(gin.ErrorTypePrivate).String(),
-		}).Info("Request")
+		}
+
+		// Include errors if they exist
+		if len(c.Errors) > 0 {
+			logFields["errors"] = c.Errors.ByType(gin.ErrorTypePrivate).String()
+		}
+
+		// Log the request details using logrus
+		logger.WithFields(logFields).Info("Request")
 	}
 }
