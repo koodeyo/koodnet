@@ -23,17 +23,83 @@ const docTemplate = `{
     },
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
-    "paths": {},
-    "securityDefinitions": {
-        "ApiKeyAuth": {
-            "type": "apiKey",
-            "name": "X-API-Key",
-            "in": "header"
+    "paths": {
+        "/networks": {
+            "get": {
+                "description": "Get a list of all networks with optional pagination",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "networks"
+                ],
+                "summary": "Get all networks",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Offset for pagination",
+                        "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "Limit for pagination",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.CollectionResponse-models_Network"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "api.CollectionResponse-models_Network": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Network"
+                    }
+                },
+                "metadata": {
+                    "$ref": "#/definitions/api.ResponseMetadata"
+                }
+            }
         },
-        "JwtAuth": {
-            "type": "apiKey",
-            "name": "Authorization",
-            "in": "header"
+        "api.ResponseMetadata": {
+            "type": "object",
+            "properties": {
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.Network": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
         }
     },
     "externalDocs": {
@@ -48,8 +114,8 @@ var SwaggerInfo = &swag.Spec{
 	Host:             "localhost:8001",
 	BasePath:         "/api/v1",
 	Schemes:          []string{},
-	Title:            "Swagger Example API",
-	Description:      "This is a sample server celler server.",
+	Title:            "Koodnet API",
+	Description:      "Server API documentation.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

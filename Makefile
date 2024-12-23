@@ -162,7 +162,7 @@ test:
 
 setup:
 	go install github.com/swaggo/swag/cmd/swag@latest
-	swag init -g ./cmd/server/main.go -o ./docs
+	swag init -g ./cmd/koodnet-api/main.go -o ./docs
 
 dev:
 	@docker compose -f docker-compose.yml up

@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -12,10 +11,14 @@ import (
 	swaggerfiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"golang.org/x/time/rate"
+	"gorm.io/gorm"
 )
 
-func NewRouter(l *logrus.Logger, ctx *context.Context) *gin.Engine {
+func NewRouter(db *gorm.DB, l *logrus.Logger, ctx *context.Context) *gin.Engine {
+	networkRepository := newNetworkRepository(db, ctx)
+
 	r := gin.Default()
+	r.Use(contextMiddleware(networkRepository))
 
 	// Apply the logging middleware
 	r.Use(middleware.Logger(l))
@@ -30,23 +33,10 @@ func NewRouter(l *logrus.Logger, ctx *context.Context) *gin.Engine {
 
 	docs.SwaggerInfo.BasePath = "/api/v1"
 
-	// Health check endpoint to verify if the service is running
-	// Responds with a 200 OK status and a message indicating the service is healthy
-	r.GET("/healthz", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"status":  "ok",
-			"message": "Service is healthy",
-		})
-	})
-
 	v1 := r.Group("/api/v1")
 	{
-		v1.GET("/", func(c *gin.Context) {
-			c.JSON(http.StatusOK, gin.H{
-				"status":  "ok",
-				"message": "API V1",
-			})
-		})
+		v1.GET("/", healthCheckHandler)
+		v1.GET("/networks", networkRepository.FindNetworks)
 	}
 
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))

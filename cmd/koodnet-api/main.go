@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"github.com/koodeyo/koodnet/pkg/api"
+	"github.com/koodeyo/koodnet/pkg/database"
 	"github.com/sirupsen/logrus"
 )
 
@@ -31,6 +32,8 @@ import (
 // @externalDocs.url          https://swagger.io/resources/open-api/
 func main() {
 	godotenv.Load()
+	db := database.NewDatabase()
+
 	l := logrus.New()
 
 	l.Formatter = &logrus.TextFormatter{
@@ -62,7 +65,7 @@ func main() {
 
 	ctx := context.Background()
 
-	r := api.NewRouter(l, &ctx)
+	r := api.NewRouter(db, l, &ctx)
 
 	if err := r.Run(laddress + lport); err != nil {
 		log.Fatal(err)
