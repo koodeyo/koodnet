@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -11,14 +10,12 @@ import (
 	swaggerfiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"golang.org/x/time/rate"
-	"gorm.io/gorm"
 )
 
-func NewRouter(db *gorm.DB, l *logrus.Logger, ctx *context.Context) *gin.Engine {
-	networkRepository := newNetworkRepository(db, ctx)
-
+func NewRouter(l *logrus.Logger) *gin.Engine {
 	r := gin.Default()
-	r.Use(contextMiddleware(networkRepository))
+	// Use centralized error handling middleware
+	r.Use(errorHandler)
 
 	// Apply the logging middleware
 	r.Use(middleware.Logger(l))
@@ -36,10 +33,13 @@ func NewRouter(db *gorm.DB, l *logrus.Logger, ctx *context.Context) *gin.Engine 
 	v1 := r.Group("/api/v1")
 	{
 		v1.GET("/", healthCheckHandler)
-		v1.GET("/networks", networkRepository.FindNetworks)
+		v1.GET("/networks", FindNetworks)
 	}
 
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
+
+	// Handle 404 (unmatched routes)
+	r.NoRoute(notFoundHandler)
 
 	return r
 }

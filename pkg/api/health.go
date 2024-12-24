@@ -6,6 +6,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+type healthResponse struct {
+	Status  string `json:"status"`
+	Message string `json:"message"`
+}
+
 // @BasePath /api/v1
 
 // Healthcheck godoc
@@ -15,11 +20,11 @@ import (
 // @Tags example
 // @Accept json
 // @Produce json
-// @Success 200 {object} ok
+// @Success 200 {object} api.healthResponse
 // @Router / [get]
 func healthCheckHandler(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
-		"status":  "ok",
-		"message": "Service is healthy",
+	c.JSON(http.StatusOK, healthResponse{
+		Status:  "ok",
+		Message: "Service is healthy",
 	})
 }

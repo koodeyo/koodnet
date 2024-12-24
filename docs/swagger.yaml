@@ -1,25 +1,44 @@
 basePath: /api/v1
 definitions:
-  api.CollectionResponse-models_Network:
+  api.healthResponse:
+    properties:
+      message:
+        type: string
+      status:
+        type: string
+    type: object
+  api.metadata:
+    properties:
+      page:
+        type: integer
+      page_size:
+        type: integer
+      total:
+        description: Total represents the total number of items.
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  api.paginatedResponse-models_Network:
     properties:
       data:
+        description: Data contains the actual collection of items.
         items:
           $ref: '#/definitions/models.Network'
         type: array
       metadata:
-        $ref: '#/definitions/api.ResponseMetadata'
-    type: object
-  api.ResponseMetadata:
-    properties:
-      total:
-        type: integer
+        allOf:
+        - $ref: '#/definitions/api.metadata'
+        description: Metadata contains additional info like the total count.
     type: object
   models.Network:
     properties:
       created_at:
         type: string
+      deleted_at:
+        type: string
       id:
-        type: integer
+        type: string
       name:
         type: string
       updated_at:
@@ -42,19 +61,34 @@ info:
   title: Koodnet API
   version: "1.0"
 paths:
+  /:
+    get:
+      consumes:
+      - application/json
+      description: do ping
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.healthResponse'
+      summary: ping example
+      tags:
+      - example
   /networks:
     get:
       description: Get a list of all networks with optional pagination
       parameters:
-      - default: 0
-        description: Offset for pagination
+      - default: 1
+        description: page for pagination
         in: query
-        name: offset
+        name: page
         type: integer
       - default: 10
-        description: Limit for pagination
+        description: page_size for pagination
         in: query
-        name: limit
+        name: page_size
         type: integer
       produces:
       - application/json
@@ -62,7 +96,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/api.CollectionResponse-models_Network'
+            $ref: '#/definitions/api.paginatedResponse-models_Network'
       summary: Get all networks
       tags:
       - networks

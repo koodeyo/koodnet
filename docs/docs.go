@@ -24,6 +24,29 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/": {
+            "get": {
+                "description": "do ping",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "example"
+                ],
+                "summary": "ping example",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.healthResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/networks": {
             "get": {
                 "description": "Get a list of all networks with optional pagination",
@@ -37,16 +60,16 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
-                        "default": 0,
-                        "description": "Offset for pagination",
-                        "name": "offset",
+                        "default": 1,
+                        "description": "page for pagination",
+                        "name": "page",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "default": 10,
-                        "description": "Limit for pagination",
-                        "name": "limit",
+                        "description": "page_size for pagination",
+                        "name": "page_size",
                         "in": "query"
                     }
                 ],
@@ -54,7 +77,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/api.CollectionResponse-models_Network"
+                            "$ref": "#/definitions/api.paginatedResponse-models_Network"
                         }
                     }
                 }
@@ -62,25 +85,52 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "api.CollectionResponse-models_Network": {
+        "api.healthResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.metadata": {
+            "type": "object",
+            "properties": {
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "description": "Total represents the total number of items.",
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "api.paginatedResponse-models_Network": {
             "type": "object",
             "properties": {
                 "data": {
+                    "description": "Data contains the actual collection of items.",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/models.Network"
                     }
                 },
                 "metadata": {
-                    "$ref": "#/definitions/api.ResponseMetadata"
-                }
-            }
-        },
-        "api.ResponseMetadata": {
-            "type": "object",
-            "properties": {
-                "total": {
-                    "type": "integer"
+                    "description": "Metadata contains additional info like the total count.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/api.metadata"
+                        }
+                    ]
                 }
             }
         },
@@ -90,8 +140,11 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
+                "deleted_at": {
+                    "type": "string"
+                },
                 "id": {
-                    "type": "integer"
+                    "type": "string"
                 },
                 "name": {
                     "type": "string"

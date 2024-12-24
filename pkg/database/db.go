@@ -6,39 +6,43 @@ import (
 	"os"
 	"time"
 
-	"github.com/koodeyo/koodnet/pkg/models"
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
-func GetPostgresURL() string {
-	var db_url string = os.Getenv("DATABASE_URL")
-
-	if db_url != "" {
-		return db_url
-	}
-
+func getPostgresURL() string {
 	db_hostname := os.Getenv("POSTGRES_HOST")
-	db_name := os.Getenv("POSTGRES_DB")
-	db_user := os.Getenv("POSTGRES_USER")
+	db_name := os.Getenv("POSTGRES_DATABASE")
 	db_pass := os.Getenv("POSTGRES_PASSWORD")
+	db_user := os.Getenv("POSTGRES_USER")
 	db_port := os.Getenv("POSTGRES_PORT")
 
-	if db_hostname != "" && db_name != "" && db_user != "" && db_pass != "" && db_port != "" {
-		return fmt.Sprintf("postgres://%s:%s@%s:%s/%s", db_user, db_pass, db_hostname, db_port, db_name)
+	if db_port == "" {
+		db_port = "5432"
 	}
+
+	if db_hostname != "" && db_name != "" && db_user != "" {
+		return fmt.Sprintf("user=%s password=%s dbname=%s port=%s sslmode=disable",
+			db_user,
+			db_pass,
+			db_name,
+			db_port,
+		)
+	}
+
 	return ""
 }
 
-func NewDatabase() *gorm.DB {
-	var database *gorm.DB
+var Conn *gorm.DB
+
+func Connect() {
 	var err error
 
-	dbURL := GetPostgresURL()
+	dbURL := getPostgresURL()
 	if dbURL != "" {
 		for i := 1; i <= 3; i++ {
-			database, err = gorm.Open(postgres.Open(dbURL), &gorm.Config{})
+			Conn, err = gorm.Open(postgres.Open(dbURL), &gorm.Config{})
 			if err == nil {
 				break
 			} else {
@@ -51,13 +55,9 @@ func NewDatabase() *gorm.DB {
 		}
 	} else {
 		log.Println("PostgreSQL environment variables not defined. Falling back to SQLite.")
-		database, err = gorm.Open(sqlite.Open("koodnet.db"), &gorm.Config{})
+		Conn, err = gorm.Open(sqlite.Open("koodnet.db"), &gorm.Config{})
 		if err != nil {
 			log.Fatalf("Failed to initialize SQLite database: %v", err)
 		}
 	}
-
-	database.AutoMigrate(&models.Network{})
-
-	return database
 }

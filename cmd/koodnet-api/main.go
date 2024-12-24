@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"os"
@@ -12,6 +11,32 @@ import (
 	"github.com/koodeyo/koodnet/pkg/database"
 	"github.com/sirupsen/logrus"
 )
+
+func init() {
+	// Load Env
+	godotenv.Load()
+
+	// Connect to database
+	database.Connect()
+
+	// migrate
+	database.Migrate()
+}
+
+func listenAddress() string {
+	lport := os.Getenv("KOODNET_LISTEN_PORT")
+	laddress := os.Getenv("KOODNET_LISTEN_ADDRESS")
+
+	if lport == "" {
+		lport = "8001"
+	}
+
+	if laddress == "" {
+		laddress = ":"
+	}
+
+	return laddress + lport
+}
 
 // @title           Koodnet API
 // @version         1.0
@@ -31,26 +56,13 @@ import (
 // @externalDocs.description  OpenAPI
 // @externalDocs.url          https://swagger.io/resources/open-api/
 func main() {
-	godotenv.Load()
-	db := database.NewDatabase()
-
 	l := logrus.New()
 
 	l.Formatter = &logrus.TextFormatter{
 		FullTimestamp: true,
 	}
 
-	lport := os.Getenv("KOODNET_LISTEN_PORT")
-	laddress := os.Getenv("KOODNET_LISTEN_ADDRESS")
 	koodnetEnv := os.Getenv("KOODNET_ENV") // Get the environment (e.g., "development", "production")
-
-	if lport == "" {
-		lport = "8001"
-	}
-
-	if laddress == "" {
-		laddress = ":"
-	}
 
 	// Dynamically set Gin mode based on KOODNET_ENV
 	switch koodnetEnv {
@@ -63,11 +75,9 @@ func main() {
 		l.SetLevel(logrus.DebugLevel)
 	}
 
-	ctx := context.Background()
+	r := api.NewRouter(l)
 
-	r := api.NewRouter(db, l, &ctx)
-
-	if err := r.Run(laddress + lport); err != nil {
+	if err := r.Run(listenAddress()); err != nil {
 		log.Fatal(err)
 	}
 }

@@ -1,8 +1,9 @@
 package api
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
-	"github.com/koodeyo/koodnet/pkg/models"
 )
 
 type apiError struct {
@@ -14,38 +15,22 @@ type errorResponse struct {
 	Errors []apiError `json:"errors"`
 }
 
-// ResponseMetadata holds metadata about the response, such as the total count of items.
 type metadata struct {
 	Page       int `json:"page"`
 	PageSize   int `json:"page_size"`
-	TotalPages int `json:"total_pages"` // Total represents the total number of items.
-	Total      int `json:"total"`       // Total represents the total number of items.
+	TotalPages int `json:"total_pages"`
+	Total      int `json:"total"` // Total represents the total number of items.
 }
 
-type ResourceModel interface {
-	models.Network
-}
-
-// CollectionResponse is a generic structure for a paginated response.
+// for a paginated response.
 // It contains the data and metadata associated with the response.
-type collectionResponse[T ResourceModel] struct {
+type paginatedResponse[T interface{}] struct {
 	Data     []T      `json:"data"`     // Data contains the actual collection of items.
 	Metadata metadata `json:"metadata"` // Metadata contains additional info like the total count.
 }
 
-type repository interface {
-	*networkRepository
-}
-
-func contextMiddleware[T repository](repository T) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.Set("appCtx", repository)
-		c.Next()
-	}
-}
-
-func paginated[T ResourceModel](data []T, c *gin.Context) collectionResponse[T] {
-	return collectionResponse[T]{
+func paginated[T interface{}](data []T, c *gin.Context) paginatedResponse[T] {
+	return paginatedResponse[T]{
 		Data: data,
 		Metadata: metadata{
 			Page:       c.GetInt("page"),
@@ -57,20 +42,32 @@ func paginated[T ResourceModel](data []T, c *gin.Context) collectionResponse[T] 
 }
 
 // Middleware for centralized error handling
-// func errorHandler(c *gin.Context) {
-// 	c.Next()
+func errorHandler(c *gin.Context) {
+	c.Next()
 
-// 	if len(c.Errors) > 0 {
-// 		var errors []apiError
+	if len(c.Errors) > 0 {
+		var errors []apiError
 
-// 		for _, err := range c.Errors {
-// 			errors = append(errors, apiError{
-// 				Code:    "ERR_UNKNOWN", // Default error code
-// 				Message: err.Error(),   // Use the error message from Gin
-// 			})
-// 		}
+		for _, err := range c.Errors {
+			errors = append(errors, apiError{
+				Code:    "ERR_UNKNOWN", // Default error code
+				Message: err.Error(),   // Use the error message from Gin
+			})
+		}
 
-// 		// Respond with a JSON error response
-// 		c.JSON(http.StatusBadRequest, errorResponse{Errors: errors})
-// 	}
-// }
+		// Respond with a JSON error response
+		c.JSON(http.StatusBadRequest, errorResponse{Errors: errors})
+	}
+}
+
+// Custom 404 Handler
+func notFoundHandler(c *gin.Context) {
+	c.JSON(http.StatusNotFound, errorResponse{
+		Errors: []apiError{
+			{
+				Code:    "ERR_NOTFOUND",
+				Message: "The requested resource was not found",
+			},
+		},
+	})
+}
