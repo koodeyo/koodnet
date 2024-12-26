@@ -20,7 +20,7 @@
     "paths": {
         "/": {
             "get": {
-                "description": "do ping",
+                "description": "This endpoint is used to verify the health and availability of the service.",
                 "consumes": [
                     "application/json"
                 ],
@@ -28,14 +28,50 @@
                     "application/json"
                 ],
                 "tags": [
-                    "example"
+                    "health"
                 ],
-                "summary": "ping example",
+                "summary": "Health check for the service",
+                "responses": {
+                    "200": {
+                        "description": "The service is operational and healthy",
+                        "schema": {
+                            "$ref": "#/definitions/api.healthResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/certificates": {
+            "get": {
+                "description": "Get a list of all certificates with optional pagination",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "certificates"
+                ],
+                "summary": "Get all certificates",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "page for pagination",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "page_size for pagination",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/api.healthResponse"
+                            "$ref": "#/definitions/api.paginatedResponse-models_Certificate"
                         }
                     }
                 }
@@ -75,10 +111,186 @@
                         }
                     }
                 }
+            },
+            "post": {
+                "description": "Create a network with the provided details",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "networks"
+                ],
+                "summary": "Create a new network",
+                "parameters": [
+                    {
+                        "description": "Network Payload",
+                        "name": "network",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.NetworkDto"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/models.Network"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.errorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/networks/{id}": {
+            "get": {
+                "description": "Retrieve details of a single network",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "networks"
+                ],
+                "summary": "Get a network by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Network ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.Network"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.errorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Delete a network by ID",
+                "tags": [
+                    "networks"
+                ],
+                "summary": "Delete a network",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Network ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Network deleted",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.errorResponse"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "description": "Update the details of an existing network",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "networks"
+                ],
+                "summary": "Update a network",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Network ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Updated network details",
+                        "name": "network",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.NetworkDto"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.Network"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.errorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.errorResponse"
+                        }
+                    }
+                }
             }
         }
     },
     "definitions": {
+        "api.apiError": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.errorResponse": {
+            "type": "object",
+            "properties": {
+                "errors": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.apiError"
+                    }
+                }
+            }
+        },
         "api.healthResponse": {
             "type": "object",
             "properties": {
@@ -108,6 +320,26 @@
                 }
             }
         },
+        "api.paginatedResponse-models_Certificate": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "description": "Data contains the actual collection of items.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Certificate"
+                    }
+                },
+                "metadata": {
+                    "description": "Metadata contains additional info like the total count.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/api.metadata"
+                        }
+                    ]
+                }
+            }
+        },
         "api.paginatedResponse-models_Network": {
             "type": "object",
             "properties": {
@@ -128,23 +360,213 @@
                 }
             }
         },
-        "models.Network": {
+        "models.Certificate": {
             "type": "object",
             "properties": {
                 "created_at": {
                     "type": "string"
                 },
-                "deleted_at": {
-                    "type": "string"
+                "crt": {
+                    "type": "string",
+                    "format": "base64"
+                },
+                "groups": {
+                    "description": "List of groups for access control, restricting subordinate certificates' groups.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "id": {
                     "type": "string"
                 },
-                "name": {
+                "ips": {
+                    "description": "List of IPv4 addresses and networks in CIDR notation. Limits the addresses for subordinate certificates.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "key": {
+                    "type": "string",
+                    "format": "base64"
+                },
+                "not_after": {
                     "type": "string"
+                },
+                "not_before": {
+                    "type": "string"
+                },
+                "owner_id": {
+                    "type": "string"
+                },
+                "owner_type": {
+                    "type": "string"
+                },
+                "passphrase": {
+                    "type": "string"
+                },
+                "pub": {
+                    "type": "string",
+                    "format": "base64"
+                },
+                "subnets": {
+                    "description": "List of IPv4 subnets in CIDR notation. Defines subnets that subordinate certificates can use.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "updated_at": {
                     "type": "string"
+                }
+            }
+        },
+        "models.Network": {
+            "type": "object",
+            "properties": {
+                "argon_iterations": {
+                    "description": "Number of Argon2 iterations for encrypting private key passphrase. Default: 2.",
+                    "type": "integer"
+                },
+                "argon_memory": {
+                    "description": "Argon2 memory parameter in KiB for encrypted private key passphrase. Default: 2 MiB. (2*1024*1024)",
+                    "type": "integer"
+                },
+                "argon_parallelism": {
+                    "description": "Argon2 parallelism parameter for encrypting private key passphrase. Default: 4.",
+                    "type": "integer"
+                },
+                "ca": {
+                    "description": "Associated Certificate Authorities (CA) for the network.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Certificate"
+                    }
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "curve": {
+                    "description": "Cryptographic curve for key generation. Options include \"25519\" (default) and \"P256\".",
+                    "type": "string"
+                },
+                "duration": {
+                    "description": "Certificate validity duration. Default: 2 years (17,531 hours). (time.Duration(time.Hour*8760))",
+                    "type": "number"
+                },
+                "encrypt": {
+                    "description": "Enables passphrase encryption for private keys. Default: true.",
+                    "type": "boolean"
+                },
+                "groups": {
+                    "description": "List of groups for access control, restricting subordinate certificates' groups.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "id": {
+                    "description": "Unique identifier for the network (UUID).",
+                    "type": "string"
+                },
+                "ips": {
+                    "description": "List of IPv4 addresses and networks in CIDR notation. Limits the addresses for subordinate certificates.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "name": {
+                    "description": "Name of the network, must be unique in combination with the CIDR.",
+                    "type": "string"
+                },
+                "passphrase": {
+                    "description": "Passphrase used for encrypting the private key.",
+                    "type": "string"
+                },
+                "subnets": {
+                    "description": "List of IPv4 subnets in CIDR notation. Defines subnets that subordinate certificates can use.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.NetworkDto": {
+            "type": "object",
+            "properties": {
+                "argon_iterations": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "argon_memory": {
+                    "type": "integer",
+                    "example": 2097152
+                },
+                "argon_parallelism": {
+                    "type": "integer",
+                    "example": 4
+                },
+                "curve": {
+                    "type": "string",
+                    "enum": [
+                        "25519",
+                        "X25519",
+                        "Curve25519",
+                        "CURVE25519",
+                        "P256"
+                    ],
+                    "example": "25519"
+                },
+                "duration": {
+                    "type": "number",
+                    "example": 17531
+                },
+                "encrypt": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "groups": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "laptop",
+                        "ssh",
+                        "servers"
+                    ]
+                },
+                "ips": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "100.100.0.0/22"
+                    ]
+                },
+                "name": {
+                    "type": "string",
+                    "example": "my-network"
+                },
+                "passphrase": {
+                    "type": "string",
+                    "example": "orange-duck-walks-happy-sunset-92"
+                },
+                "subnets": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "192.168.1.0/24"
+                    ]
                 }
             }
         }

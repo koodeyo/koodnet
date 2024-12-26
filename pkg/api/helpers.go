@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/koodeyo/koodnet/pkg/models"
 )
 
 type apiError struct {
@@ -67,6 +68,31 @@ func notFoundHandler(c *gin.Context) {
 			{
 				Code:    "ERR_NOTFOUND",
 				Message: "The requested resource was not found",
+			},
+		},
+	})
+}
+
+func dbErrorHandler(err error, c *gin.Context) {
+	// Look up the error in the map
+	if errInfo, found := models.Errors[err]; found {
+		c.JSON(errInfo.Status, errorResponse{
+			Errors: []apiError{
+				{
+					Code:    errInfo.Code,
+					Message: errInfo.Message + " Details: " + err.Error(),
+				},
+			},
+		})
+		return
+	}
+
+	// Default case for unexpected errors
+	c.JSON(http.StatusInternalServerError, errorResponse{
+		Errors: []apiError{
+			{
+				Code:    "ERR_INTERNAL",
+				Message: "An internal server error occurred. " + err.Error(),
 			},
 		},
 	})

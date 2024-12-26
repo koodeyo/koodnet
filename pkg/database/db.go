@@ -12,8 +12,13 @@ import (
 )
 
 func getPostgresURL() string {
+	db_url := os.Getenv("POSTGRES_URL")
+	if db_url != "" {
+		return db_url
+	}
+
 	db_hostname := os.Getenv("POSTGRES_HOST")
-	db_name := os.Getenv("POSTGRES_DATABASE")
+	db_name := os.Getenv("POSTGRES_DB")
 	db_pass := os.Getenv("POSTGRES_PASSWORD")
 	db_user := os.Getenv("POSTGRES_USER")
 	db_port := os.Getenv("POSTGRES_PORT")
@@ -23,7 +28,8 @@ func getPostgresURL() string {
 	}
 
 	if db_hostname != "" && db_name != "" && db_user != "" {
-		return fmt.Sprintf("user=%s password=%s dbname=%s port=%s sslmode=disable",
+		return fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
+			db_hostname,
 			db_user,
 			db_pass,
 			db_name,
@@ -55,9 +61,16 @@ func Connect() {
 		}
 	} else {
 		log.Println("PostgreSQL environment variables not defined. Falling back to SQLite.")
-		Conn, err = gorm.Open(sqlite.Open("koodnet.db"), &gorm.Config{})
+		Conn, err = gorm.Open(sqlite.Open("koodnet.db?_foreign_keys=1"), &gorm.Config{})
 		if err != nil {
 			log.Fatalf("Failed to initialize SQLite database: %v", err)
+		}
+
+		var enabled bool
+		db, _ := Conn.DB()
+		db.QueryRow("PRAGMA foreign_keys;").Scan(&enabled)
+		if enabled {
+			log.Println("yes, foreign keys are enabled")
 		}
 	}
 }

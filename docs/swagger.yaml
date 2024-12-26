@@ -1,5 +1,19 @@
 basePath: /api/v1
 definitions:
+  api.apiError:
+    properties:
+      code:
+        type: string
+      message:
+        type: string
+    type: object
+  api.errorResponse:
+    properties:
+      errors:
+        items:
+          $ref: '#/definitions/api.apiError'
+        type: array
+    type: object
   api.healthResponse:
     properties:
       message:
@@ -19,6 +33,18 @@ definitions:
       total_pages:
         type: integer
     type: object
+  api.paginatedResponse-models_Certificate:
+    properties:
+      data:
+        description: Data contains the actual collection of items.
+        items:
+          $ref: '#/definitions/models.Certificate'
+        type: array
+      metadata:
+        allOf:
+        - $ref: '#/definitions/api.metadata'
+        description: Metadata contains additional info like the total count.
+    type: object
   api.paginatedResponse-models_Network:
     properties:
       data:
@@ -31,18 +57,166 @@ definitions:
         - $ref: '#/definitions/api.metadata'
         description: Metadata contains additional info like the total count.
     type: object
-  models.Network:
+  models.Certificate:
     properties:
       created_at:
         type: string
-      deleted_at:
+      crt:
+        format: base64
         type: string
+      groups:
+        description: List of groups for access control, restricting subordinate certificates'
+          groups.
+        items:
+          type: string
+        type: array
       id:
         type: string
-      name:
+      ips:
+        description: List of IPv4 addresses and networks in CIDR notation. Limits
+          the addresses for subordinate certificates.
+        items:
+          type: string
+        type: array
+      key:
+        format: base64
         type: string
+      not_after:
+        type: string
+      not_before:
+        type: string
+      owner_id:
+        type: string
+      owner_type:
+        type: string
+      passphrase:
+        type: string
+      pub:
+        format: base64
+        type: string
+      subnets:
+        description: List of IPv4 subnets in CIDR notation. Defines subnets that subordinate
+          certificates can use.
+        items:
+          type: string
+        type: array
       updated_at:
         type: string
+    type: object
+  models.Network:
+    properties:
+      argon_iterations:
+        description: 'Number of Argon2 iterations for encrypting private key passphrase.
+          Default: 2.'
+        type: integer
+      argon_memory:
+        description: 'Argon2 memory parameter in KiB for encrypted private key passphrase.
+          Default: 2 MiB. (2*1024*1024)'
+        type: integer
+      argon_parallelism:
+        description: 'Argon2 parallelism parameter for encrypting private key passphrase.
+          Default: 4.'
+        type: integer
+      ca:
+        description: Associated Certificate Authorities (CA) for the network.
+        items:
+          $ref: '#/definitions/models.Certificate'
+        type: array
+      created_at:
+        type: string
+      curve:
+        description: Cryptographic curve for key generation. Options include "25519"
+          (default) and "P256".
+        type: string
+      duration:
+        description: 'Certificate validity duration. Default: 2 years (17,531 hours).
+          (time.Duration(time.Hour*8760))'
+        type: number
+      encrypt:
+        description: 'Enables passphrase encryption for private keys. Default: true.'
+        type: boolean
+      groups:
+        description: List of groups for access control, restricting subordinate certificates'
+          groups.
+        items:
+          type: string
+        type: array
+      id:
+        description: Unique identifier for the network (UUID).
+        type: string
+      ips:
+        description: List of IPv4 addresses and networks in CIDR notation. Limits
+          the addresses for subordinate certificates.
+        items:
+          type: string
+        type: array
+      name:
+        description: Name of the network, must be unique in combination with the CIDR.
+        type: string
+      passphrase:
+        description: Passphrase used for encrypting the private key.
+        type: string
+      subnets:
+        description: List of IPv4 subnets in CIDR notation. Defines subnets that subordinate
+          certificates can use.
+        items:
+          type: string
+        type: array
+      updated_at:
+        type: string
+    type: object
+  models.NetworkDto:
+    properties:
+      argon_iterations:
+        example: 2
+        type: integer
+      argon_memory:
+        example: 2097152
+        type: integer
+      argon_parallelism:
+        example: 4
+        type: integer
+      curve:
+        enum:
+        - "25519"
+        - X25519
+        - Curve25519
+        - CURVE25519
+        - P256
+        example: "25519"
+        type: string
+      duration:
+        example: 17531
+        type: number
+      encrypt:
+        example: false
+        type: boolean
+      groups:
+        example:
+        - laptop
+        - ssh
+        - servers
+        items:
+          type: string
+        type: array
+      ips:
+        example:
+        - 100.100.0.0/22
+        items:
+          type: string
+        type: array
+      name:
+        example: my-network
+        type: string
+      passphrase:
+        example: orange-duck-walks-happy-sunset-92
+        type: string
+      subnets:
+        example:
+        - 192.168.1.0/24
+        items:
+          type: string
+        type: array
     type: object
 externalDocs:
   description: OpenAPI
@@ -65,17 +239,42 @@ paths:
     get:
       consumes:
       - application/json
-      description: do ping
+      description: This endpoint is used to verify the health and availability of
+        the service.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: The service is operational and healthy
+          schema:
+            $ref: '#/definitions/api.healthResponse'
+      summary: Health check for the service
+      tags:
+      - health
+  /certificates:
+    get:
+      description: Get a list of all certificates with optional pagination
+      parameters:
+      - default: 1
+        description: page for pagination
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: page_size for pagination
+        in: query
+        name: page_size
+        type: integer
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/api.healthResponse'
-      summary: ping example
+            $ref: '#/definitions/api.paginatedResponse-models_Certificate'
+      summary: Get all certificates
       tags:
-      - example
+      - certificates
   /networks:
     get:
       description: Get a list of all networks with optional pagination
@@ -98,6 +297,108 @@ paths:
           schema:
             $ref: '#/definitions/api.paginatedResponse-models_Network'
       summary: Get all networks
+      tags:
+      - networks
+    post:
+      consumes:
+      - application/json
+      description: Create a network with the provided details
+      parameters:
+      - description: Network Payload
+        in: body
+        name: network
+        required: true
+        schema:
+          $ref: '#/definitions/models.NetworkDto'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Network'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.errorResponse'
+      summary: Create a new network
+      tags:
+      - networks
+  /networks/{id}:
+    delete:
+      description: Delete a network by ID
+      parameters:
+      - description: Network ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: Network deleted
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.errorResponse'
+      summary: Delete a network
+      tags:
+      - networks
+    get:
+      description: Retrieve details of a single network
+      parameters:
+      - description: Network ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Network'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.errorResponse'
+      summary: Get a network by ID
+      tags:
+      - networks
+    patch:
+      consumes:
+      - application/json
+      description: Update the details of an existing network
+      parameters:
+      - description: Network ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated network details
+        in: body
+        name: network
+        required: true
+        schema:
+          $ref: '#/definitions/models.NetworkDto'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Network'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.errorResponse'
+      summary: Update a network
       tags:
       - networks
 swagger: "2.0"

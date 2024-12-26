@@ -8,3 +8,19 @@ services:
       - 8001:8001
     volumes:
       - .:/app
+    depends_on:
+      - db
+    environment:
+      POSTGRES_URL: postgresql://user:password@localhost:5432/koodnet
+  db:
+    image: postgres:latest
+    restart: always
+    container_name: database
+    volumes:
+      - .data:/var/lib/postgres
+    ports:
+      - "5435:5435"
+    environment:
+      - POSTGRES_DB=koodnet
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password

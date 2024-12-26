@@ -32,8 +32,21 @@ func NewRouter(l *logrus.Logger) *gin.Engine {
 
 	v1 := r.Group("/api/v1")
 	{
+		// Health route
 		v1.GET("/", healthCheckHandler)
-		v1.GET("/networks", FindNetworks)
+
+		// Network routes
+		networks := v1.Group("/networks")
+		{
+			networks.GET("/", FindNetworks)
+			networks.POST("/", CreateNetwork)
+			networks.GET("/:id", FindNetwork)
+			networks.DELETE("/:id", DeleteNetwork)
+			networks.PATCH("/:id", UpdateNetwork)
+		}
+
+		// Certificate routes
+		v1.GET("/certificates", FindCertificates)
 	}
 
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))

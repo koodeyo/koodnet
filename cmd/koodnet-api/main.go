@@ -19,7 +19,7 @@ func init() {
 	// Connect to database
 	database.Connect()
 
-	// migrate
+	// Migrate
 	database.Migrate()
 }
 
