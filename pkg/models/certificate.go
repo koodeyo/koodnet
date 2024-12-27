@@ -3,12 +3,13 @@ package models
 import (
 	"time"
 
+	"github.com/google/uuid"
 	"gorm.io/datatypes"
 )
 
 type Certificate struct {
-	ID         string                      `json:"id" gorm:"type:text;primary_key;"`
-	OwnerID    string                      `json:"owner_id" gorm:"type:text;not null;index"`
+	ID         uuid.UUID                   `json:"id" gorm:"type:uuid;primary_key;"`
+	OwnerID    uuid.UUID                   `json:"owner_id" gorm:"type:uuid;not null;index"`
 	OwnerType  string                      `json:"owner_type" gorm:"not null"`
 	NotBefore  time.Time                   `json:"not_before" gorm:"not null"`
 	NotAfter   time.Time                   `json:"not_after" gorm:"not null"`

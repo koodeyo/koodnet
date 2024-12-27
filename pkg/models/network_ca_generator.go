@@ -112,7 +112,7 @@ func (n *Network) NewCA() (*Certificate, error) {
 
 	return &Certificate{
 		IsCA:       true,
-		ID:         uuid.New().String(),
+		ID:         uuid.New(),
 		NotBefore:  nc.Details.NotBefore,
 		NotAfter:   nc.Details.NotAfter,
 		Key:        keyBytes,

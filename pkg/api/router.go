@@ -45,6 +45,16 @@ func NewRouter(l *logrus.Logger) *gin.Engine {
 			networks.PATCH("/:id", UpdateNetwork)
 		}
 
+		// Host routes
+		hosts := v1.Group("/hosts")
+		{
+			hosts.GET("/", FindHosts)
+			hosts.POST("/", CreateHost)
+			hosts.GET("/:id", FindHost)
+			hosts.PATCH("/:id", UpdateHost)
+			hosts.DELETE("/:id", DeleteHost)
+		}
+
 		// Certificate routes
 		v1.GET("/certificates", FindCertificates)
 	}

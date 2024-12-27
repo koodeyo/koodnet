@@ -4,9 +4,9 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/koodeyo/koodnet/pkg/database"
 	"github.com/koodeyo/koodnet/pkg/models"
+	"gorm.io/gorm/clause"
 )
 
 // FindNetworks godoc
@@ -22,7 +22,7 @@ func FindNetworks(c *gin.Context) {
 	var networks []models.Network
 
 	// Fetch data from the database
-	database.Conn.Model(&models.Network{}).Scopes(models.Paginate(c)).Preload("Ca").Find(&networks)
+	database.Conn.Model(&models.Network{}).Scopes(models.Paginate(c)).Preload("Ca").Preload("Hosts").Find(&networks)
 
 	response := paginated(networks, c)
 
@@ -41,10 +41,10 @@ func FindNetworks(c *gin.Context) {
 // @Failure 400 {object} api.errorResponse
 // @Router /networks [post]
 func CreateNetwork(c *gin.Context) {
-	var p models.NetworkDto
+	var dto models.NetworkDto
 
 	// Validate the p
-	if err := c.ShouldBindJSON(&p); err != nil {
+	if err := c.ShouldBindJSON(&dto); err != nil {
 		c.JSON(http.StatusBadRequest, errorResponse{
 			Errors: []apiError{
 				{
@@ -57,18 +57,17 @@ func CreateNetwork(c *gin.Context) {
 	}
 
 	n := models.Network{
-		ID:               uuid.New().String(), // Unique identifier for the network
-		Name:             p.Name,              // Name of the network
-		IPs:              p.IPs,               // List of IP ranges
-		Subnets:          p.Subnets,           // List of subnets
-		Groups:           p.Groups,            // Associated groups
-		Duration:         p.Duration,          // Duration in seconds
-		Encrypt:          p.Encrypt,           // Whether encryption is enabled
-		Passphrase:       p.Passphrase,        // Encryption passphrase
-		ArgonMemory:      p.ArgonMemory,       // Memory usage for Argon2
-		ArgonIterations:  p.ArgonIterations,   // Iterations for Argon2
-		ArgonParallelism: p.ArgonParallelism,  // Parallelism for Argon2
-		Curve:            p.Curve,             // Cryptographic curve (e.g., 25519)
+		Name:             dto.Name,             // Name of the network
+		IPs:              dto.IPs,              // List of IP ranges
+		Subnets:          dto.Subnets,          // List of subnets
+		Groups:           dto.Groups,           // Associated groups
+		Duration:         dto.Duration,         // Duration in seconds
+		Encrypt:          dto.Encrypt,          // Whether encryption is enabled
+		Passphrase:       dto.Passphrase,       // Encryption passphrase
+		ArgonMemory:      dto.ArgonMemory,      // Memory usage for Argon2
+		ArgonIterations:  dto.ArgonIterations,  // Iterations for Argon2
+		ArgonParallelism: dto.ArgonParallelism, // Parallelism for Argon2
+		Curve:            dto.Curve,            // Cryptographic curve (e.g., 25519)
 	}
 
 	// Save to the database
@@ -86,7 +85,7 @@ func CreateNetwork(c *gin.Context) {
 // @Description Delete a network by ID
 // @Tags networks
 // @Param id path string true "Network ID"
-// @Success 204 {string} string "Network deleted"
+// @Success 200 {object} map[string]bool "Delete status"
 // @Failure 404 {object} api.errorResponse
 // @Router /networks/{id} [delete]
 func DeleteNetwork(c *gin.Context) {
@@ -98,8 +97,7 @@ func DeleteNetwork(c *gin.Context) {
 		return
 	}
 
-	// Respond with no content
-	c.Status(http.StatusNoContent)
+	c.JSON(http.StatusOK, gin.H{"delete": true})
 }
 
 // FindNetwork godoc
@@ -142,7 +140,7 @@ func UpdateNetwork(c *gin.Context) {
 	var n models.Network
 
 	// Attempt to find the existing network
-	if err := database.Conn.First(&n, "id = ?", id).Error; err != nil {
+	if err := database.Conn.Omit(clause.Associations).First(&n, "id = ?", id).Error; err != nil {
 		dbErrorHandler(err, c)
 		return
 	}

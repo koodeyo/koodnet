@@ -45,6 +45,18 @@ definitions:
         - $ref: '#/definitions/api.metadata'
         description: Metadata contains additional info like the total count.
     type: object
+  api.paginatedResponse-models_Host:
+    properties:
+      data:
+        description: Data contains the actual collection of items.
+        items:
+          $ref: '#/definitions/models.Host'
+        type: array
+      metadata:
+        allOf:
+        - $ref: '#/definitions/api.metadata'
+        description: Metadata contains additional info like the total count.
+    type: object
   api.paginatedResponse-models_Network:
     properties:
       data:
@@ -78,6 +90,8 @@ definitions:
         items:
           type: string
         type: array
+      is_ca:
+        type: boolean
       key:
         format: base64
         type: string
@@ -102,6 +116,81 @@ definitions:
         type: array
       updated_at:
         type: string
+    type: object
+  models.Host:
+    properties:
+      certificates:
+        items:
+          $ref: '#/definitions/models.Certificate'
+        type: array
+      created_at:
+        type: string
+      groups:
+        items:
+          type: string
+        type: array
+      id:
+        type: string
+      ip:
+        type: string
+      is_lighthouse:
+        type: boolean
+      listen_port:
+        type: integer
+      name:
+        type: string
+      network:
+        $ref: '#/definitions/models.Network'
+      network_id:
+        type: string
+      static_addresses:
+        items:
+          type: string
+        type: array
+      subnets:
+        items:
+          type: string
+        type: array
+      updated_at:
+        type: string
+    type: object
+  models.HostDto:
+    properties:
+      groups:
+        example:
+        - servers
+        - laptops
+        items:
+          type: string
+        type: array
+      ip:
+        example: 192.168.1.100
+        type: string
+      is_lighthouse:
+        example: false
+        type: boolean
+      listen_port:
+        example: 4242
+        type: integer
+      name:
+        example: host-1
+        type: string
+      network_id:
+        example: c6d6c4c4-b65b-40e1-bcf2-1fd3122c653d
+        type: string
+      static_addresses:
+        example:
+        - 109.243.69.39
+        items:
+          type: string
+        type: array
+      subnets:
+        example:
+        - 192.168.1.0/24
+        - 10.0.0.0/16
+        items:
+          type: string
+        type: array
     type: object
   models.Network:
     properties:
@@ -140,6 +229,11 @@ definitions:
           groups.
         items:
           type: string
+        type: array
+      hosts:
+        description: Associated hosts for the network.
+        items:
+          $ref: '#/definitions/models.Host'
         type: array
       id:
         description: Unique identifier for the network (UUID).
@@ -275,6 +369,132 @@ paths:
       summary: Get all certificates
       tags:
       - certificates
+  /hosts:
+    get:
+      description: Get a list of all hosts with optional pagination
+      parameters:
+      - default: 1
+        description: page for pagination
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: page_size for pagination
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.paginatedResponse-models_Host'
+      summary: Get all hosts
+      tags:
+      - hosts
+    post:
+      consumes:
+      - application/json
+      description: Create a host with the provided details
+      parameters:
+      - description: Host Payload
+        in: body
+        name: host
+        required: true
+        schema:
+          $ref: '#/definitions/models.HostDto'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Host'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.errorResponse'
+      summary: Create a new host
+      tags:
+      - hosts
+  /hosts/{id}:
+    delete:
+      description: Delete a host by ID
+      parameters:
+      - description: Host ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: Host deleted
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.errorResponse'
+      summary: Delete a host
+      tags:
+      - hosts
+    get:
+      description: Retrieve details of a single host
+      parameters:
+      - description: Host ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Host'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.errorResponse'
+      summary: Get a host by ID
+      tags:
+      - hosts
+    patch:
+      consumes:
+      - application/json
+      description: Update the details of an existing host
+      parameters:
+      - description: Host ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated host details
+        in: body
+        name: host
+        required: true
+        schema:
+          $ref: '#/definitions/models.HostDto'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Host'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.errorResponse'
+      summary: Update a host
+      tags:
+      - hosts
   /networks:
     get:
       description: Get a list of all networks with optional pagination

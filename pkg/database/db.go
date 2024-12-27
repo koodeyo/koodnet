@@ -61,16 +61,9 @@ func Connect() {
 		}
 	} else {
 		log.Println("PostgreSQL environment variables not defined. Falling back to SQLite.")
-		Conn, err = gorm.Open(sqlite.Open("koodnet.db?_foreign_keys=1"), &gorm.Config{})
+		Conn, err = gorm.Open(sqlite.Open("koodnet.db"), &gorm.Config{})
 		if err != nil {
 			log.Fatalf("Failed to initialize SQLite database: %v", err)
-		}
-
-		var enabled bool
-		db, _ := Conn.DB()
-		db.QueryRow("PRAGMA foreign_keys;").Scan(&enabled)
-		if enabled {
-			log.Println("yes, foreign keys are enabled")
 		}
 	}
 }

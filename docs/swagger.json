@@ -77,6 +77,196 @@
                 }
             }
         },
+        "/hosts": {
+            "get": {
+                "description": "Get a list of all hosts with optional pagination",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "hosts"
+                ],
+                "summary": "Get all hosts",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "page for pagination",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "page_size for pagination",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.paginatedResponse-models_Host"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Create a host with the provided details",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "hosts"
+                ],
+                "summary": "Create a new host",
+                "parameters": [
+                    {
+                        "description": "Host Payload",
+                        "name": "host",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.HostDto"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/models.Host"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.errorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/hosts/{id}": {
+            "get": {
+                "description": "Retrieve details of a single host",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "hosts"
+                ],
+                "summary": "Get a host by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Host ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.Host"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.errorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Delete a host by ID",
+                "tags": [
+                    "hosts"
+                ],
+                "summary": "Delete a host",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Host ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Host deleted",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.errorResponse"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "description": "Update the details of an existing host",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "hosts"
+                ],
+                "summary": "Update a host",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Host ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Updated host details",
+                        "name": "host",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.HostDto"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.Host"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.errorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.errorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/networks": {
             "get": {
                 "description": "Get a list of all networks with optional pagination",
@@ -340,6 +530,26 @@
                 }
             }
         },
+        "api.paginatedResponse-models_Host": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "description": "Data contains the actual collection of items.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Host"
+                    }
+                },
+                "metadata": {
+                    "description": "Metadata contains additional info like the total count.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/api.metadata"
+                        }
+                    ]
+                }
+            }
+        },
         "api.paginatedResponse-models_Network": {
             "type": "object",
             "properties": {
@@ -387,6 +597,9 @@
                         "type": "string"
                     }
                 },
+                "is_ca": {
+                    "type": "boolean"
+                },
                 "key": {
                     "type": "string",
                     "format": "base64"
@@ -419,6 +632,116 @@
                 },
                 "updated_at": {
                     "type": "string"
+                }
+            }
+        },
+        "models.Host": {
+            "type": "object",
+            "properties": {
+                "certificates": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Certificate"
+                    }
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "groups": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "id": {
+                    "type": "string"
+                },
+                "ip": {
+                    "type": "string"
+                },
+                "is_lighthouse": {
+                    "type": "boolean"
+                },
+                "listen_port": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "network": {
+                    "$ref": "#/definitions/models.Network"
+                },
+                "network_id": {
+                    "type": "string"
+                },
+                "static_addresses": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "subnets": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.HostDto": {
+            "type": "object",
+            "properties": {
+                "groups": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "servers",
+                        "laptops"
+                    ]
+                },
+                "ip": {
+                    "type": "string",
+                    "example": "192.168.1.100"
+                },
+                "is_lighthouse": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "listen_port": {
+                    "type": "integer",
+                    "example": 4242
+                },
+                "name": {
+                    "type": "string",
+                    "example": "host-1"
+                },
+                "network_id": {
+                    "type": "string",
+                    "example": "c6d6c4c4-b65b-40e1-bcf2-1fd3122c653d"
+                },
+                "static_addresses": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "109.243.69.39"
+                    ]
+                },
+                "subnets": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "192.168.1.0/24",
+                        "10.0.0.0/16"
+                    ]
                 }
             }
         },
@@ -464,6 +787,13 @@
                     "type": "array",
                     "items": {
                         "type": "string"
+                    }
+                },
+                "hosts": {
+                    "description": "Associated hosts for the network.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Host"
                     }
                 },
                 "id": {
