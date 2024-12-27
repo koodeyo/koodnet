@@ -78,7 +78,7 @@ func (n *Network) NewCA() (*Certificate, error) {
 			Ips:       n.getIPs(),
 			Subnets:   n.getSubnets(),
 			NotBefore: time.Now(),
-			NotAfter:  time.Now().Add(n.Duration),
+			NotAfter:  time.Now().Add(time.Duration(time.Hour * n.Duration)),
 			PublicKey: pub,
 			IsCA:      true,
 			Curve:     curve,
@@ -115,12 +115,9 @@ func (n *Network) NewCA() (*Certificate, error) {
 		ID:         uuid.New(),
 		NotBefore:  nc.Details.NotBefore,
 		NotAfter:   nc.Details.NotAfter,
+		Passphrase: n.Passphrase,
 		Key:        keyBytes,
 		Pub:        pubBytes,
 		Crt:        certBytes,
-		Passphrase: n.Passphrase,
-		IPs:        n.IPs,
-		Groups:     n.Groups,
-		Subnets:    n.Subnets,
 	}, nil
 }

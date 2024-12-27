@@ -68,8 +68,8 @@ const docTemplate = `{
                     {
                         "type": "integer",
                         "default": 10,
-                        "description": "page_size for pagination",
-                        "name": "page_size",
+                        "description": "pageSize for pagination",
+                        "name": "pageSize",
                         "in": "query"
                     }
                 ],
@@ -104,8 +104,8 @@ const docTemplate = `{
                     {
                         "type": "integer",
                         "default": 10,
-                        "description": "page_size for pagination",
-                        "name": "page_size",
+                        "description": "pageSize for pagination",
+                        "name": "pageSize",
                         "in": "query"
                     }
                 ],
@@ -207,10 +207,13 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
-                    "204": {
-                        "description": "Host deleted",
+                    "200": {
+                        "description": "Delete status",
                         "schema": {
-                            "type": "string"
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "boolean"
+                            }
                         }
                     },
                     "404": {
@@ -294,8 +297,8 @@ const docTemplate = `{
                     {
                         "type": "integer",
                         "default": 10,
-                        "description": "page_size for pagination",
-                        "name": "page_size",
+                        "description": "pageSize for pagination",
+                        "name": "pageSize",
                         "in": "query"
                     }
                 ],
@@ -397,10 +400,13 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
-                    "204": {
-                        "description": "Network deleted",
+                    "200": {
+                        "description": "Delete status",
                         "schema": {
-                            "type": "string"
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "boolean"
+                            }
                         }
                     },
                     "404": {
@@ -504,14 +510,14 @@ const docTemplate = `{
                 "page": {
                     "type": "integer"
                 },
-                "page_size": {
+                "pageSize": {
                     "type": "integer"
                 },
                 "total": {
                     "description": "Total represents the total number of items.",
                     "type": "integer"
                 },
-                "total_pages": {
+                "totalPages": {
                     "type": "integer"
                 }
             }
@@ -579,64 +585,40 @@ const docTemplate = `{
         "models.Certificate": {
             "type": "object",
             "properties": {
-                "created_at": {
+                "createdAt": {
                     "type": "string"
                 },
                 "crt": {
-                    "type": "string",
-                    "format": "base64"
-                },
-                "groups": {
-                    "description": "List of groups for access control, restricting subordinate certificates' groups.",
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
+                    "type": "string"
                 },
                 "id": {
                     "type": "string"
                 },
-                "ips": {
-                    "description": "List of IPv4 addresses and networks in CIDR notation. Limits the addresses for subordinate certificates.",
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "is_ca": {
+                "isCa": {
                     "type": "boolean"
                 },
                 "key": {
-                    "type": "string",
-                    "format": "base64"
-                },
-                "not_after": {
                     "type": "string"
                 },
-                "not_before": {
+                "notAfter": {
                     "type": "string"
                 },
-                "owner_id": {
+                "notBefore": {
                     "type": "string"
                 },
-                "owner_type": {
+                "ownerId": {
+                    "type": "string"
+                },
+                "ownerType": {
                     "type": "string"
                 },
                 "passphrase": {
                     "type": "string"
                 },
                 "pub": {
-                    "type": "string",
-                    "format": "base64"
+                    "type": "string"
                 },
-                "subnets": {
-                    "description": "List of IPv4 subnets in CIDR notation. Defines subnets that subordinate certificates can use.",
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "updated_at": {
+                "updatedAt": {
                     "type": "string"
                 }
             }
@@ -650,7 +632,13 @@ const docTemplate = `{
                         "$ref": "#/definitions/models.Certificate"
                     }
                 },
-                "created_at": {
+                "configuration": {
+                    "type": "array",
+                    "items": {
+                        "type": "object"
+                    }
+                },
+                "createdAt": {
                     "type": "string"
                 },
                 "groups": {
@@ -662,13 +650,16 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
+                "inPub": {
+                    "type": "string"
+                },
                 "ip": {
                     "type": "string"
                 },
-                "is_lighthouse": {
+                "isLighthouse": {
                     "type": "boolean"
                 },
-                "listen_port": {
+                "listenPort": {
                     "type": "integer"
                 },
                 "name": {
@@ -677,10 +668,10 @@ const docTemplate = `{
                 "network": {
                     "$ref": "#/definitions/models.Network"
                 },
-                "network_id": {
+                "networkId": {
                     "type": "string"
                 },
-                "static_addresses": {
+                "staticAddresses": {
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -692,7 +683,7 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
-                "updated_at": {
+                "updatedAt": {
                     "type": "string"
                 }
             }
@@ -700,25 +691,35 @@ const docTemplate = `{
         "models.HostDto": {
             "type": "object",
             "properties": {
+                "configuration": {
+                    "type": "array",
+                    "items": {
+                        "type": "object"
+                    }
+                },
                 "groups": {
                     "type": "array",
                     "items": {
                         "type": "string"
                     },
                     "example": [
+                        "laptop",
                         "servers",
-                        "laptops"
+                        "ssh"
                     ]
+                },
+                "inPub": {
+                    "type": "string"
                 },
                 "ip": {
                     "type": "string",
-                    "example": "192.168.1.100"
+                    "example": "100.100.0.1/24"
                 },
-                "is_lighthouse": {
+                "isLighthouse": {
                     "type": "boolean",
                     "example": false
                 },
-                "listen_port": {
+                "listenPort": {
                     "type": "integer",
                     "example": 4242
                 },
@@ -726,7 +727,7 @@ const docTemplate = `{
                     "type": "string",
                     "example": "host-1"
                 },
-                "network_id": {
+                "networkId": {
                     "type": "string",
                     "example": "c6d6c4c4-b65b-40e1-bcf2-1fd3122c653d"
                 },
@@ -745,8 +746,7 @@ const docTemplate = `{
                         "type": "string"
                     },
                     "example": [
-                        "192.168.1.0/24",
-                        "10.0.0.0/16"
+                        "192.168.1.0/24"
                     ]
                 }
             }
@@ -754,15 +754,15 @@ const docTemplate = `{
         "models.Network": {
             "type": "object",
             "properties": {
-                "argon_iterations": {
+                "argonIterations": {
                     "description": "Number of Argon2 iterations for encrypting private key passphrase. Default: 2.",
                     "type": "integer"
                 },
-                "argon_memory": {
+                "argonMemory": {
                     "description": "Argon2 memory parameter in KiB for encrypted private key passphrase. Default: 2 MiB. (2*1024*1024)",
                     "type": "integer"
                 },
-                "argon_parallelism": {
+                "argonParallelism": {
                     "description": "Argon2 parallelism parameter for encrypting private key passphrase. Default: 4.",
                     "type": "integer"
                 },
@@ -773,7 +773,7 @@ const docTemplate = `{
                         "$ref": "#/definitions/models.Certificate"
                     }
                 },
-                "created_at": {
+                "createdAt": {
                     "type": "string"
                 },
                 "curve": {
@@ -828,7 +828,7 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
-                "updated_at": {
+                "updatedAt": {
                     "type": "string"
                 }
             }
@@ -836,15 +836,15 @@ const docTemplate = `{
         "models.NetworkDto": {
             "type": "object",
             "properties": {
-                "argon_iterations": {
+                "argonIterations": {
                     "type": "integer",
                     "example": 2
                 },
-                "argon_memory": {
+                "argonMemory": {
                     "type": "integer",
                     "example": 2097152
                 },
-                "argon_parallelism": {
+                "argonParallelism": {
                     "type": "integer",
                     "example": 4
                 },

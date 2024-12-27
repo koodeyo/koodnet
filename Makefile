@@ -164,12 +164,15 @@ setup:
 	go install github.com/swaggo/swag/cmd/swag@latest
 	swag init -g ./cmd/koodnet-api/main.go -o ./docs
 
-dev:
-	@docker compose -f docker-compose.yml up
+docker:
+	docker compose -f docker-compose.yml up
 
-stop:
-	@docker compose -f docker-compose.yml down
+docker-stop:
+	docker compose -f docker-compose.yml down
+
+dev:
+	air
 
 .FORCE:
-.PHONY: dev stop setup bin release service
-.DEFAULT_GOAL := bin
+.PHONY: dev docker docker-stop setup bin release service
+.DEFAULT_GOAL := dev

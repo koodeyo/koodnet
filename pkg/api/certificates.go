@@ -14,7 +14,7 @@ import (
 // @Tags certificates
 // @Produce json
 // @Param page query int false "page for pagination" default(1)
-// @Param page_size query int false "page_size for pagination" default(10)
+// @Param pageSize query int false "pageSize for pagination" default(10)
 // @Success 200 {object} api.paginatedResponse[models.Certificate]
 // @Router /certificates [get]
 func FindCertificates(c *gin.Context) {

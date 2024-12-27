@@ -15,7 +15,7 @@ import (
 // @Tags networks
 // @Produce json
 // @Param page query int false "page for pagination" default(1)
-// @Param page_size query int false "page_size for pagination" default(10)
+// @Param pageSize query int false "pageSize for pagination" default(10)
 // @Success 200 {object} api.paginatedResponse[models.Network]
 // @Router /networks [get]
 func FindNetworks(c *gin.Context) {
@@ -114,7 +114,7 @@ func FindNetwork(c *gin.Context) {
 	var network models.Network
 
 	// Attempt to find the network
-	if err := database.Conn.Preload("Ca").First(&network, "id = ?", id).Error; err != nil {
+	if err := database.Conn.First(&network, "id = ?", id).Error; err != nil {
 		dbErrorHandler(err, c)
 		return
 	}

@@ -18,8 +18,8 @@ type errorResponse struct {
 
 type metadata struct {
 	Page       int `json:"page"`
-	PageSize   int `json:"page_size"`
-	TotalPages int `json:"total_pages"`
+	PageSize   int `json:"pageSize"`
+	TotalPages int `json:"totalPages"`
 	Total      int `json:"total"` // Total represents the total number of items.
 }
 

@@ -1,6 +1,7 @@
 .vscode
 .env
 .DS_Store
+/tmp
 /koodnet
 /koodnet-api
 /koodnet-arm
@@ -15,3 +16,4 @@
 **.pem
 **.pub
 *.db
+.data

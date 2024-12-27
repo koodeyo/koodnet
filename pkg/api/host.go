@@ -6,7 +6,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/koodeyo/koodnet/pkg/database"
 	"github.com/koodeyo/koodnet/pkg/models"
-	"gorm.io/gorm/clause"
 )
 
 // FindHosts godoc
@@ -15,17 +14,14 @@ import (
 // @Tags hosts
 // @Produce json
 // @Param page query int false "page for pagination" default(1)
-// @Param page_size query int false "page_size for pagination" default(10)
+// @Param pageSize query int false "pageSize for pagination" default(10)
 // @Success 200 {object} api.paginatedResponse[models.Host]
 // @Router /hosts [get]
 func FindHosts(c *gin.Context) {
 	var hosts []models.Host
 
 	// Fetch data from the database with pagination
-	database.Conn.Model(&models.Host{}).Scopes(models.Paginate(c)).
-		Preload("Network").
-		Preload("Certificates").
-		Find(&hosts)
+	database.Conn.Model(&models.Host{}).Scopes(models.Paginate(c)).Find(&hosts)
 
 	response := paginated(hosts, c)
 
@@ -68,6 +64,8 @@ func CreateHost(c *gin.Context) {
 		ListenPort:      dto.ListenPort,
 		IsLighthouse:    dto.IsLighthouse,
 		NetworkID:       dto.NetworkID,
+		Configuration:   dto.Configuration,
+		InPub:           []byte(dto.InPub),
 	}
 
 	// Save to database
@@ -75,9 +73,6 @@ func CreateHost(c *gin.Context) {
 		dbErrorHandler(err, c)
 		return
 	}
-
-	// Reload the host with associations
-	database.Conn.Preload("Network").Preload("Certificates").First(&host, "id = ?", host.ID)
 
 	c.JSON(http.StatusCreated, host)
 }
@@ -114,7 +109,7 @@ func FindHost(c *gin.Context) {
 	id := c.Param("id")
 	var host models.Host
 
-	if err := database.Conn.Preload("Network").Preload("Cert").First(&host, "id = ?", id).Error; err != nil {
+	if err := database.Conn.First(&host, "id = ?", id).Error; err != nil {
 		dbErrorHandler(err, c)
 		return
 	}
@@ -139,7 +134,7 @@ func UpdateHost(c *gin.Context) {
 	var host models.Host
 
 	// Find existing host
-	if err := database.Conn.Omit(clause.Associations).First(&host, "id = ?", id).Error; err != nil {
+	if err := database.Conn.First(&host, "id = ?", id).Error; err != nil {
 		dbErrorHandler(err, c)
 		return
 	}
@@ -163,9 +158,6 @@ func UpdateHost(c *gin.Context) {
 		dbErrorHandler(err, c)
 		return
 	}
-
-	// Reload the host with associations
-	database.Conn.Preload("Network").Preload("Certificates").First(&host, "id = ?", id)
 
 	c.JSON(http.StatusOK, host)
 }

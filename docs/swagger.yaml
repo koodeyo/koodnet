@@ -25,12 +25,12 @@ definitions:
     properties:
       page:
         type: integer
-      page_size:
+      pageSize:
         type: integer
       total:
         description: Total represents the total number of items.
         type: integer
-      total_pages:
+      totalPages:
         type: integer
     type: object
   api.paginatedResponse-models_Certificate:
@@ -71,50 +71,29 @@ definitions:
     type: object
   models.Certificate:
     properties:
-      created_at:
+      createdAt:
         type: string
       crt:
-        format: base64
         type: string
-      groups:
-        description: List of groups for access control, restricting subordinate certificates'
-          groups.
-        items:
-          type: string
-        type: array
       id:
         type: string
-      ips:
-        description: List of IPv4 addresses and networks in CIDR notation. Limits
-          the addresses for subordinate certificates.
-        items:
-          type: string
-        type: array
-      is_ca:
+      isCa:
         type: boolean
       key:
-        format: base64
         type: string
-      not_after:
+      notAfter:
         type: string
-      not_before:
+      notBefore:
         type: string
-      owner_id:
+      ownerId:
         type: string
-      owner_type:
+      ownerType:
         type: string
       passphrase:
         type: string
       pub:
-        format: base64
         type: string
-      subnets:
-        description: List of IPv4 subnets in CIDR notation. Defines subnets that subordinate
-          certificates can use.
-        items:
-          type: string
-        type: array
-      updated_at:
+      updatedAt:
         type: string
     type: object
   models.Host:
@@ -123,7 +102,11 @@ definitions:
         items:
           $ref: '#/definitions/models.Certificate'
         type: array
-      created_at:
+      configuration:
+        items:
+          type: object
+        type: array
+      createdAt:
         type: string
       groups:
         items:
@@ -131,19 +114,21 @@ definitions:
         type: array
       id:
         type: string
+      inPub:
+        type: string
       ip:
         type: string
-      is_lighthouse:
+      isLighthouse:
         type: boolean
-      listen_port:
+      listenPort:
         type: integer
       name:
         type: string
       network:
         $ref: '#/definitions/models.Network'
-      network_id:
+      networkId:
         type: string
-      static_addresses:
+      staticAddresses:
         items:
           type: string
         type: array
@@ -151,31 +136,38 @@ definitions:
         items:
           type: string
         type: array
-      updated_at:
+      updatedAt:
         type: string
     type: object
   models.HostDto:
     properties:
+      configuration:
+        items:
+          type: object
+        type: array
       groups:
         example:
+        - laptop
         - servers
-        - laptops
+        - ssh
         items:
           type: string
         type: array
-      ip:
-        example: 192.168.1.100
+      inPub:
         type: string
-      is_lighthouse:
+      ip:
+        example: 100.100.0.1/24
+        type: string
+      isLighthouse:
         example: false
         type: boolean
-      listen_port:
+      listenPort:
         example: 4242
         type: integer
       name:
         example: host-1
         type: string
-      network_id:
+      networkId:
         example: c6d6c4c4-b65b-40e1-bcf2-1fd3122c653d
         type: string
       static_addresses:
@@ -187,22 +179,21 @@ definitions:
       subnets:
         example:
         - 192.168.1.0/24
-        - 10.0.0.0/16
         items:
           type: string
         type: array
     type: object
   models.Network:
     properties:
-      argon_iterations:
+      argonIterations:
         description: 'Number of Argon2 iterations for encrypting private key passphrase.
           Default: 2.'
         type: integer
-      argon_memory:
+      argonMemory:
         description: 'Argon2 memory parameter in KiB for encrypted private key passphrase.
           Default: 2 MiB. (2*1024*1024)'
         type: integer
-      argon_parallelism:
+      argonParallelism:
         description: 'Argon2 parallelism parameter for encrypting private key passphrase.
           Default: 4.'
         type: integer
@@ -211,7 +202,7 @@ definitions:
         items:
           $ref: '#/definitions/models.Certificate'
         type: array
-      created_at:
+      createdAt:
         type: string
       curve:
         description: Cryptographic curve for key generation. Options include "25519"
@@ -256,18 +247,18 @@ definitions:
         items:
           type: string
         type: array
-      updated_at:
+      updatedAt:
         type: string
     type: object
   models.NetworkDto:
     properties:
-      argon_iterations:
+      argonIterations:
         example: 2
         type: integer
-      argon_memory:
+      argonMemory:
         example: 2097152
         type: integer
-      argon_parallelism:
+      argonParallelism:
         example: 4
         type: integer
       curve:
@@ -355,9 +346,9 @@ paths:
         name: page
         type: integer
       - default: 10
-        description: page_size for pagination
+        description: pageSize for pagination
         in: query
-        name: page_size
+        name: pageSize
         type: integer
       produces:
       - application/json
@@ -379,9 +370,9 @@ paths:
         name: page
         type: integer
       - default: 10
-        description: page_size for pagination
+        description: pageSize for pagination
         in: query
-        name: page_size
+        name: pageSize
         type: integer
       produces:
       - application/json
@@ -428,10 +419,12 @@ paths:
         required: true
         type: string
       responses:
-        "204":
-          description: Host deleted
+        "200":
+          description: Delete status
           schema:
-            type: string
+            additionalProperties:
+              type: boolean
+            type: object
         "404":
           description: Not Found
           schema:
@@ -505,9 +498,9 @@ paths:
         name: page
         type: integer
       - default: 10
-        description: page_size for pagination
+        description: pageSize for pagination
         in: query
-        name: page_size
+        name: pageSize
         type: integer
       produces:
       - application/json
@@ -554,10 +547,12 @@ paths:
         required: true
         type: string
       responses:
-        "204":
-          description: Network deleted
+        "200":
+          description: Delete status
           schema:
-            type: string
+            additionalProperties:
+              type: boolean
+            type: object
         "404":
           description: Not Found
           schema:

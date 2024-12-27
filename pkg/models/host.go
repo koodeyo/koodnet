@@ -1,6 +1,7 @@
 package models
 
 import (
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
@@ -9,34 +10,70 @@ import (
 )
 
 type Host struct {
-	ID              uuid.UUID                   `json:"id" gorm:"type:uuid;primary_key;"`
-	Name            string                      `json:"name" gorm:"size:255;not null;uniqueIndex:idx_name_network"`
-	IP              string                      `json:"ip" gorm:"size:255;not null;uniqueIndex:idx_ip_network"`
-	StaticAddresses datatypes.JSONSlice[string] `json:"static_addresses" gorm:"type:json;default:'[]'" swaggertype:"array,string"`
-	Subnets         datatypes.JSONSlice[string] `json:"subnets" gorm:"type:json;default:'[]'" swaggertype:"array,string"`
-	Groups          datatypes.JSONSlice[string] `json:"groups" gorm:"type:json;default:'[]'" swaggertype:"array,string"`
-	ListenPort      uint                        `json:"listen_port" gorm:"default:4242"`
-	IsLighthouse    bool                        `json:"is_lighthouse" gorm:"default:false"`
-	NetworkID       uuid.UUID                   `json:"network_id" gorm:"type:uuid"`
-	Network         Network                     `json:"network"`
-	Certificates    []Certificate               `json:"Certificates,omitempty" gorm:"polymorphic:Owner;constraint:OnDelete:CASCADE"`
-	CreatedAt       time.Time                   `json:"created_at" gorm:"autoCreateTime"`
-	UpdatedAt       time.Time                   `json:"updated_at" gorm:"autoUpdateTime"`
+	ID              uuid.UUID                               `json:"id" gorm:"type:uuid;primary_key;"`
+	Name            string                                  `json:"name" gorm:"size:255;not null;uniqueIndex:idx_name_network"`
+	IP              string                                  `json:"ip" gorm:"size:255;not null;uniqueIndex:idx_ip_network"`
+	StaticAddresses datatypes.JSONSlice[string]             `json:"staticAddresses" gorm:"type:json;default:'[]'" swaggertype:"array,string"`
+	Subnets         datatypes.JSONSlice[string]             `json:"subnets" gorm:"type:json;default:'[]'" swaggertype:"array,string"`
+	Groups          datatypes.JSONSlice[string]             `json:"groups" gorm:"type:json;default:'[]'" swaggertype:"array,string"`
+	ListenPort      uint                                    `json:"listenPort" gorm:"default:4242"`
+	IsLighthouse    bool                                    `json:"isLighthouse" gorm:"default:false"`
+	InPub           []byte                                  `json:"inPub,omitempty" swaggertype:"string"`
+	NetworkID       uuid.UUID                               `json:"networkId" gorm:"type:uuid"`
+	Network         *Network                                `json:"network,omitempty"`
+	Certificates    []Certificate                           `json:"certificates,omitempty" gorm:"polymorphic:Owner;constraint:OnDelete:CASCADE"`
+	Configuration   datatypes.JSONSlice[HostConfigKeyValue] `json:"configuration" gorm:"type:json;default:'[]'" swaggertype:"array,object"`
+	CreatedAt       time.Time                               `json:"createdAt" gorm:"autoCreateTime"`
+	UpdatedAt       time.Time                               `json:"updatedAt" gorm:"autoUpdateTime"`
 }
 
 type HostDto struct {
-	Name            string                      `json:"name,omitempty" example:"host-1"`
-	IP              string                      `json:"ip,omitempty" example:"192.168.1.100"`
-	StaticAddresses datatypes.JSONSlice[string] `json:"static_addresses,omitempty" swaggertype:"array,string" example:"109.243.69.39"`
-	Subnets         datatypes.JSONSlice[string] `json:"subnets,omitempty" swaggertype:"array,string" example:"192.168.1.0/24,10.0.0.0/16"`
-	Groups          datatypes.JSONSlice[string] `json:"groups,omitempty" swaggertype:"array,string" example:"servers,laptops"`
-	NetworkID       uuid.UUID                   `json:"network_id,omitempty" example:"c6d6c4c4-b65b-40e1-bcf2-1fd3122c653d"`
-	ListenPort      uint                        `json:"listen_port,omitempty" example:"4242"`
-	IsLighthouse    bool                        `json:"is_lighthouse,omitempty" example:"false"`
+	Name            string                                  `json:"name,omitempty" example:"host-1"`
+	IP              string                                  `json:"ip,omitempty" example:"100.100.0.1/24"`
+	InPub           string                                  `json:"inPub" swaggertype:"string"`
+	StaticAddresses datatypes.JSONSlice[string]             `json:"static_addresses,omitempty" swaggertype:"array,string" example:"109.243.69.39"`
+	Subnets         datatypes.JSONSlice[string]             `json:"subnets,omitempty" swaggertype:"array,string" example:"192.168.1.0/24"`
+	Groups          datatypes.JSONSlice[string]             `json:"groups,omitempty" swaggertype:"array,string" example:"laptop,servers,ssh"`
+	NetworkID       uuid.UUID                               `json:"networkId,omitempty" example:"c6d6c4c4-b65b-40e1-bcf2-1fd3122c653d"`
+	ListenPort      uint                                    `json:"listenPort,omitempty" example:"4242"`
+	IsLighthouse    bool                                    `json:"isLighthouse,omitempty" example:"false"`
+	Configuration   datatypes.JSONSlice[HostConfigKeyValue] `json:"configuration,omitempty" swaggertype:"array,object"`
 }
 
-func (n *Host) BeforeCreate(tx *gorm.DB) error {
-	n.ID = uuid.New()
+func (h *Host) BeforeCreate(db *gorm.DB) error {
+	h.ID = uuid.New()
+
+	if len(h.Certificates) == 0 {
+		if err := h.Sign(db); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (h *Host) Sign(db *gorm.DB) error {
+	// Attempt to find the network
+	var n Network
+	if err := db.Preload("Ca").First(&n, "id = ?", h.NetworkID).Error; err != nil {
+		return errors.New("host is not associated with any network")
+	}
+
+	CAs := n.ValidCAs()
+
+	// Validate CA is present in the network
+	if len(CAs) == 0 {
+		return errors.New("no CA certificates found for the network")
+	}
+
+	ca := CAs[len(CAs)-1]
+
+	cert, err := h.NewCert(ca)
+	if err != nil {
+		return err
+	}
+
+	h.Certificates = append(h.Certificates, *cert)
 
 	return nil
 }
