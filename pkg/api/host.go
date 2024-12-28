@@ -64,8 +64,8 @@ func CreateHost(c *gin.Context) {
 		ListenPort:      dto.ListenPort,
 		IsLighthouse:    dto.IsLighthouse,
 		NetworkID:       dto.NetworkID,
-		Configuration:   dto.Configuration,
-		InPub:           []byte(dto.InPub),
+		// ConfigOverrides: dto.ConfigOverrides,
+		InPub: []byte(dto.InPub),
 	}
 
 	// Save to database

@@ -582,6 +582,21 @@ const docTemplate = `{
                 }
             }
         },
+        "models.CalculatedRemote": {
+            "type": "object",
+            "properties": {
+                "mask": {
+                    "description": "Mask defines the network range used to calculate the remote IP.",
+                    "type": "string",
+                    "example": "192.168.1.0/24"
+                },
+                "port": {
+                    "description": "Port defines the port to be used for the calculated remote IP.",
+                    "type": "integer",
+                    "example": 4242
+                }
+            }
+        },
         "models.Certificate": {
             "type": "object",
             "properties": {
@@ -623,6 +638,110 @@ const docTemplate = `{
                 }
             }
         },
+        "models.Configuration": {
+            "type": "object",
+            "properties": {
+                "cipher": {
+                    "description": "Cipher allows you to choose between the available ciphers for your network. Options are chachapoly or aes\nIMPORTANT: this value must be identical on ALL NODES/LIGHTHOUSES. We do not/will not support use of different ciphers simultaneously!",
+                    "type": "string",
+                    "example": "aes"
+                },
+                "firewall": {
+                    "description": "Nebula security group configuration",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.configFirewall"
+                        }
+                    ]
+                },
+                "handshakes": {
+                    "$ref": "#/definitions/models.configHandshakes"
+                },
+                "lighthouse": {
+                    "$ref": "#/definitions/models.configLighthouse"
+                },
+                "listen": {
+                    "description": "Port Nebula will be listening on. The default here is 4242. For a lighthouse node, the port should be defined,\nhowever using port 0 will dynamically assign a port and is recommended for roaming nodes.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.configListen"
+                        }
+                    ]
+                },
+                "localRange": {
+                    "type": "string"
+                },
+                "logging": {
+                    "$ref": "#/definitions/models.configLogging"
+                },
+                "pki": {
+                    "description": "PKI defines the location of credentials for this node. Each of these can also be inlined by using the yaml \": |\" syntax.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.configPKI"
+                        }
+                    ]
+                },
+                "preferredRanges": {
+                    "description": "Preferred ranges is used to define a hint about the local network ranges, which speeds up discovering the fastest\npath to a network adjacent nebula node.\nThis setting is reloadable.",
+                    "type": "string",
+                    "example": "172.16.0.0/24"
+                },
+                "punchy": {
+                    "$ref": "#/definitions/models.configPunchy"
+                },
+                "relay": {
+                    "description": "EXPERIMENTAL: relay support for networks that can't establish direct connections.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.configRelay"
+                        }
+                    ]
+                },
+                "routines": {
+                    "description": "Routines is the number of thread pairs to run that consume from the tun and UDP queues.\nCurrently, this defaults to 1 which means we have 1 tun queue reader and 1\nUDP queue reader. Setting this above one will set IFF_MULTI_QUEUE on the tun\ndevice and SO_REUSEPORT on the UDP socket to allow multiple queues.\nThis option is only supported on Linux.",
+                    "type": "integer",
+                    "example": 1
+                },
+                "sshd": {
+                    "description": "sshd can expose informational and administrative functions via ssh. This can expose informational and administrative\nfunctions, and allows manual tweaking of various network settings when debugging or testing.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.configSSHD"
+                        }
+                    ]
+                },
+                "staticHostmap": {
+                    "description": "The static host map defines a set of hosts with fixed IP addresses on the internet (or any network).\nA host can have multiple fixed IP addresses defined here, and nebula will try each when establishing a tunnel.\nThe syntax is:\n\"{nebula ip}\": [\"{routable ip/dns name}:{routable port}\"]\nExample, if your lighthouse has the nebula IP of 192.168.100.1 and has the real ip address of 100.64.22.11 and runs on port 4242:",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "staticMap": {
+                    "description": "The static_map config stanza can be used to configure how the static_host_map behaves.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.configStaticMap"
+                        }
+                    ]
+                },
+                "stats": {
+                    "$ref": "#/definitions/models.configStats"
+                },
+                "tun": {
+                    "description": "Configure the private interface. Note: addr is baked into the nebula certificate",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.configTun"
+                        }
+                    ]
+                }
+            }
+        },
         "models.Host": {
             "type": "object",
             "properties": {
@@ -633,10 +752,7 @@ const docTemplate = `{
                     }
                 },
                 "configuration": {
-                    "type": "array",
-                    "items": {
-                        "type": "object"
-                    }
+                    "$ref": "#/definitions/models.Configuration"
                 },
                 "createdAt": {
                     "type": "string"
@@ -692,10 +808,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "configuration": {
-                    "type": "array",
-                    "items": {
-                        "type": "object"
-                    }
+                    "$ref": "#/definitions/models.Configuration"
                 },
                 "groups": {
                     "type": "array",
@@ -731,7 +844,7 @@ const docTemplate = `{
                     "type": "string",
                     "example": "c6d6c4c4-b65b-40e1-bcf2-1fd3122c653d"
                 },
-                "static_addresses": {
+                "staticAddresses": {
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -903,6 +1016,627 @@ const docTemplate = `{
                     "example": [
                         "192.168.1.0/24"
                     ]
+                }
+            }
+        },
+        "models.configAuthorizedUser": {
+            "type": "object",
+            "properties": {
+                "keys": {
+                    "description": "Keys is a list of authorized SSH public keys for the user. It can contain multiple keys.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "ssh public key string"
+                    ]
+                },
+                "name": {
+                    "description": "Name specifies the username for SSH access.",
+                    "type": "string",
+                    "example": "steeeeve"
+                }
+            }
+        },
+        "models.configConnTrack": {
+            "type": "object",
+            "properties": {
+                "defaultTimeout": {
+                    "description": "Default connection timeout",
+                    "type": "string",
+                    "example": "10m"
+                },
+                "tcpTimeout": {
+                    "description": "TCP connection timeout",
+                    "type": "string",
+                    "example": "12m"
+                },
+                "udpTimeout": {
+                    "description": "UDP connection timeout",
+                    "type": "string",
+                    "example": "3m"
+                }
+            }
+        },
+        "models.configDNS": {
+            "type": "object",
+            "properties": {
+                "host": {
+                    "description": "Host defines the DNS IP address to bind the DNS listener to. This can also bind to the Nebula node IP.",
+                    "type": "string",
+                    "example": "0.0.0.0"
+                },
+                "port": {
+                    "description": "Port defines the port for the DNS listener, typically 53.",
+                    "type": "integer",
+                    "example": 53
+                }
+            }
+        },
+        "models.configFirewall": {
+            "type": "object",
+            "properties": {
+                "connTrack": {
+                    "description": "Connection tracking configuration",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.configConnTrack"
+                        }
+                    ]
+                },
+                "defaultLocalCIDRAny": {
+                    "description": "Controls the default value for local_cidr. Default is true, will be deprecated after v1.9 and defaulted to false.\nThis setting only affects nebula hosts with subnets encoded in their certificate. A nebula host acting as an\nunsafe router with ` + "`" + `default_local_cidr_any: true` + "`" + ` will expose their unsafe routes to every inbound rule regardless\nof the actual destination for the packet. Setting this to false requires each inbound rule to contain a ` + "`" + `local_cidr` + "`" + `\nif the intention is to allow traffic to flow to an unsafe route.",
+                    "type": "boolean",
+                    "example": true
+                },
+                "inbound": {
+                    "description": "Inbound firewall rules",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.configFirewallRule"
+                    }
+                },
+                "inboundAction": {
+                    "description": "Action for unmatched inbound packets",
+                    "type": "string",
+                    "example": "drop"
+                },
+                "outbound": {
+                    "description": "Outbound firewall rules",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.configFirewallRule"
+                    }
+                },
+                "outboundAction": {
+                    "description": "Action for unmatched outbound packets",
+                    "type": "string",
+                    "example": "drop"
+                }
+            }
+        },
+        "models.configFirewallRule": {
+            "type": "object",
+            "properties": {
+                "caName": {
+                    "description": "Certificate authority name",
+                    "type": "string",
+                    "example": "An issuing CA name"
+                },
+                "caSha": {
+                    "description": "Certificate authority SHA",
+                    "type": "string",
+                    "example": "An issuing CA shasum"
+                },
+                "cidr": {
+                    "description": "Remote CIDR to match",
+                    "type": "string"
+                },
+                "code": {
+                    "description": "ICMP code (for ICMP-specific rules)",
+                    "type": "string",
+                    "example": "any"
+                },
+                "group": {
+                    "description": "Specific group to match",
+                    "type": "string"
+                },
+                "groups": {
+                    "description": "Multiple groups to match (AND logic)",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "host": {
+                    "description": "Specific host to match",
+                    "type": "string"
+                },
+                "localCIDR": {
+                    "description": "Local CIDR for unsafe routes",
+                    "type": "string"
+                },
+                "port": {
+                    "description": "Port or range of ports",
+                    "type": "string",
+                    "example": "80"
+                },
+                "proto": {
+                    "description": "Protocol",
+                    "type": "string",
+                    "example": "tcp"
+                }
+            }
+        },
+        "models.configHandshakes": {
+            "type": "object",
+            "properties": {
+                "queryBuffer": {
+                    "description": "Size of the buffer channel for querying lighthouses",
+                    "type": "integer",
+                    "example": 64
+                },
+                "retries": {
+                    "description": "Number of retries for handshakes",
+                    "type": "integer",
+                    "example": 20
+                },
+                "triggerBuffer": {
+                    "description": "Size of the buffer channel for quickly sending handshakes",
+                    "type": "integer",
+                    "example": 64
+                },
+                "tryInterval": {
+                    "description": "Time interval between handshake retries",
+                    "type": "string",
+                    "example": "100ms"
+                }
+            }
+        },
+        "models.configLighthouse": {
+            "type": "object",
+            "properties": {
+                "advertiseAddrs": {
+                    "description": "AdvertiseAddrs are routable addresses that will be included with discovered addresses to report to the lighthouse.\nThis is mainly used for static IPs or port forwarding scenarios where Nebula might not automatically discover them.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "1.1.1.1:4242",
+                        "1.2.3.4:0"
+                    ]
+                },
+                "amLighthouse": {
+                    "description": "AmLighthouse is used to enable lighthouse functionality for a node. This should ONLY be true on nodes\nyou have configured to be lighthouses in your network.",
+                    "type": "boolean",
+                    "example": false
+                },
+                "calculatedRemotes": {
+                    "description": "CalculatedRemotes is an experimental feature that allows for \"guessing\" the remote IPs based on Nebula IPs,\nwhile waiting for the lighthouse response.",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/definitions/models.CalculatedRemote"
+                        }
+                    }
+                },
+                "dns": {
+                    "description": "DNS holds the DNS configuration for this node.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.configDNS"
+                        }
+                    ]
+                },
+                "hosts": {
+                    "description": "Hosts is a list of lighthouse hosts this node should report to and query from.\nIMPORTANT: THIS SHOULD BE EMPTY ON LIGHTHOUSE NODES\nIMPORTANT2: THIS SHOULD BE LIGHTHOUSES' NEBULA IPs, NOT LIGHTHOUSES' REAL ROUTABLE IPs",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "192.168.100.1"
+                    ]
+                },
+                "interval": {
+                    "description": "Interval is the number of seconds between updates from this node to a lighthouse.\nDuring updates, a node sends information about its current IP addresses to each node.",
+                    "type": "integer",
+                    "example": 60
+                },
+                "localAllowList": {
+                    "description": "LocalAllowList is a map of local hosts that are allowed to communicate with this node.\nThe key is the host's IP address, and the value is an arbitrary interface{} for future extensibility.",
+                    "type": "object",
+                    "additionalProperties": true
+                },
+                "remoteAllowList": {
+                    "description": "RemoteAllowList is a map of remote hosts that are allowed to communicate with this node.\nThe key is the host's IP address, and the value is a boolean indicating if it's allowed.",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "boolean"
+                    },
+                    "example": {
+                        "0.0.0.0/0": false,
+                        "172.16.0.0/12": true
+                    }
+                },
+                "remoteAllowRanges": {
+                    "description": "RemoteAllowRanges defines more specific remote IP rules for VPN CIDR ranges.\nThis feature is experimental and may change in the future.",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "boolean"
+                        }
+                    }
+                },
+                "serveDns": {
+                    "description": "ServeDNS optionally starts a DNS listener that responds to various queries and can even be\ndelegated to for resolution.",
+                    "type": "boolean",
+                    "example": false
+                }
+            }
+        },
+        "models.configListen": {
+            "type": "object",
+            "properties": {
+                "batch": {
+                    "description": "Batch sets the maximum number of packets to pull from the kernel for each syscall.\nThis is used in systems that support recvmmsg (a system call for receiving multiple messages).\nThe default value is 64, and it cannot be reloaded dynamically.",
+                    "type": "integer",
+                    "example": 64
+                },
+                "host": {
+                    "description": "Host defines the IP address to listen on. To listen on all interfaces, use \"0.0.0.0\" (IPv4) or \"::\" (IPv6).",
+                    "type": "string",
+                    "example": "[::]"
+                },
+                "port": {
+                    "description": "Port defines the port to listen on. This should be an open port on the system.",
+                    "type": "integer",
+                    "example": 4242
+                },
+                "readBuffer": {
+                    "description": "ReadBuffer defines the size of the read buffer for the UDP socket. This can be adjusted for performance,\nespecially if the system is receiving a high volume of traffic. The default value is set to 10 MB.\nThis value can be configured in the system's network settings.",
+                    "type": "integer",
+                    "example": 10485760
+                },
+                "sendRecvError": {
+                    "description": "SendRecvError controls whether Nebula sends \"recv_error\" packets when it receives data on an unknown tunnel.\nThese packets can help with reconnecting after an abnormal shutdown but could potentially leak information about\nthe system's state. Valid values: \"always\", \"never\", or \"private\".\n\"always\" sends the packet in all cases, \"never\" disables it, and \"private\" sends it only to private network remotes.",
+                    "type": "string",
+                    "example": "always"
+                },
+                "writeBuffer": {
+                    "description": "WriteBuffer defines the size of the write buffer for the UDP socket. Similar to ReadBuffer, it controls\nthe buffer size for outgoing packets. The default value is set to 10 MB.",
+                    "type": "integer",
+                    "example": 10485760
+                }
+            }
+        },
+        "models.configLogging": {
+            "type": "object",
+            "properties": {
+                "disableTimestamp": {
+                    "description": "DisableTimestamp controls whether timestamps are logged. Defaults to false.",
+                    "type": "boolean",
+                    "example": false
+                },
+                "format": {
+                    "description": "Format specifies the format of the log output.\nAvailable options are: json or text.",
+                    "type": "string",
+                    "example": "text"
+                },
+                "level": {
+                    "description": "Level specifies the logging level.\nAvailable options are: panic, fatal, error, warning, info, or debug.",
+                    "type": "string",
+                    "example": "info"
+                },
+                "timestampFormat": {
+                    "description": "TimestampFormat specifies the format for timestamps in the log output.\nUses Go's time format constants. Leave empty for default behavior.",
+                    "type": "string",
+                    "example": "2006-01-02T15:04:05.000Z07:00"
+                }
+            }
+        },
+        "models.configPKI": {
+            "type": "object",
+            "properties": {
+                "blacklist": {
+                    "description": "A list of certificate fingerprints that should be blocked. These are certificates the node will not communicate with.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "c99d4e650533b92061b09918e838a5a0a6aaee21eed1d12fd937682865936c72"
+                    ]
+                },
+                "ca": {
+                    "description": "The CA certificate path, used to validate other certificates. Typically located in '/etc/nebula/ca.crt'.",
+                    "type": "string",
+                    "example": "/etc/nebula/ca.crt"
+                },
+                "cert": {
+                    "description": "The certificate path for this node. Typically located in '/etc/nebula/host.crt'.",
+                    "type": "string",
+                    "example": "/etc/nebula/host.crt"
+                },
+                "disconnectInvalid": {
+                    "description": "Flag to toggle whether to disconnect clients with expired or invalid certificates.",
+                    "type": "boolean",
+                    "example": false
+                },
+                "key": {
+                    "description": "The private key path for this node. Typically located in '/etc/nebula/host.key'.",
+                    "type": "string",
+                    "example": "/etc/nebula/host.key"
+                }
+            }
+        },
+        "models.configPunchy": {
+            "type": "object",
+            "properties": {
+                "delay": {
+                    "description": "Delay specifies the delay before attempting a punch response for misbehaving NATs. This is particularly useful\nwhen dealing with NATs that behave incorrectly. The default value is \"1s\".",
+                    "type": "string",
+                    "example": "1s"
+                },
+                "punch": {
+                    "description": "Punch defines whether the node should continuously attempt to punch inbound and outbound NAT mappings.\nThis helps avoid the expiration of firewall NAT mappings, ensuring the connection remains active.",
+                    "type": "boolean",
+                    "example": true
+                },
+                "respond": {
+                    "description": "Respond defines whether the node should connect back if a hole-punching attempt fails. This is useful for\nsituations where one node is behind a difficult NAT (such as symmetric NAT), allowing it to establish a connection.\nThe default value is false.",
+                    "type": "boolean",
+                    "example": false
+                },
+                "respondDelay": {
+                    "description": "RespondDelay sets the delay before attempting punchy.respond, which controls how long the node waits\nbefore trying to connect back after a failed hole punch. This only applies if ` + "`" + `respond` + "`" + ` is set to true.\nThe default value is \"5s\".",
+                    "type": "string",
+                    "example": "5s"
+                }
+            }
+        },
+        "models.configRelay": {
+            "type": "object",
+            "properties": {
+                "amRelay": {
+                    "description": "Set to true to permit other hosts to list my IP in their relays config. Default is false.",
+                    "type": "boolean",
+                    "example": false
+                },
+                "relays": {
+                    "description": "List of Nebula IPs that peers can use to relay packets to this instance.\nIPs in this list must have am_relay set to true in their configs, or they will reject relay requests.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "192.168.100.1"
+                    ]
+                },
+                "useRelays": {
+                    "description": "Set to false to prevent this instance from attempting to establish connections through relays. Default is true.",
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "models.configRoute": {
+            "type": "object",
+            "properties": {
+                "mtu": {
+                    "description": "MTU for this specific route. If not set, the default TUN MTU is used.",
+                    "type": "integer",
+                    "example": 8800
+                },
+                "route": {
+                    "description": "Route is the destination network in CIDR format for this route.",
+                    "type": "string",
+                    "example": "10.0.0.0/16"
+                }
+            }
+        },
+        "models.configSSHD": {
+            "type": "object",
+            "properties": {
+                "authorizedUsers": {
+                    "description": "AuthorizedUsers lists the users allowed to authenticate via SSH, along with their corresponding public keys.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.configAuthorizedUser"
+                    }
+                },
+                "enabled": {
+                    "description": "Enabled toggles the SSHD feature, allowing SSH access to the node for administrative and debugging tasks.",
+                    "type": "boolean",
+                    "example": true
+                },
+                "hostKey": {
+                    "description": "HostKey specifies the file path to the private key used for SSH host identification.",
+                    "type": "string",
+                    "example": "./ssh_host_ed25519_key"
+                },
+                "listen": {
+                    "description": "Listen specifies the IP address and port that the SSH server should bind to. The default port 22 is not allowed for safety reasons.",
+                    "type": "string",
+                    "example": "127.0.0.1:2222"
+                },
+                "trustedCas": {
+                    "description": "TrustedCAs is a list of trusted SSH Certificate Authorities (CAs) public keys that can sign SSH user keys.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "ssh public key string"
+                    ]
+                }
+            }
+        },
+        "models.configStaticMap": {
+            "type": "object",
+            "properties": {
+                "cadence": {
+                    "description": "Cadence determines how frequently DNS is re-queried for updated IP addresses when a static_host_map entry contains a DNS name.",
+                    "type": "string",
+                    "example": "30s"
+                },
+                "lookupTimeout": {
+                    "description": "LookupTimeout is the DNS query timeout.",
+                    "type": "string",
+                    "example": "250ms"
+                },
+                "network": {
+                    "description": "Network determines the type of IP addresses to ask the DNS server for.\nValid options are \"ip4\" (default), \"ip6\", or \"ip\" (returns both).",
+                    "type": "string",
+                    "example": "ip4"
+                }
+            }
+        },
+        "models.configStats": {
+            "type": "object",
+            "properties": {
+                "host": {
+                    "description": "Host for Graphite,",
+                    "type": "string",
+                    "example": "127.0.0.1:9999"
+                },
+                "interval": {
+                    "description": "Stats reporting interval",
+                    "type": "string",
+                    "example": "10s"
+                },
+                "lighthouseMetrics": {
+                    "description": "Enable lighthouse metrics",
+                    "type": "boolean",
+                    "example": false
+                },
+                "listen": {
+                    "description": "Fields for Prometheus",
+                    "type": "string",
+                    "example": "127.0.0.1:8080"
+                },
+                "messageMetrics": {
+                    "description": "Additional fields",
+                    "type": "boolean",
+                    "example": false
+                },
+                "namespace": {
+                    "description": "Namespace for Prometheus metrics",
+                    "type": "string",
+                    "example": "prometheusns"
+                },
+                "path": {
+                    "description": "Path for Prometheus metrics",
+                    "type": "string",
+                    "example": "/metrics"
+                },
+                "prefix": {
+                    "description": "Fields for Graphite",
+                    "type": "string",
+                    "example": "nebula"
+                },
+                "protocol": {
+                    "description": "Protocol for Graphite, e.g., \"tcp\"",
+                    "type": "string",
+                    "example": "tcp"
+                },
+                "subsystem": {
+                    "description": "Subsystem for Prometheus metrics",
+                    "type": "string",
+                    "example": "nebula"
+                },
+                "type": {
+                    "description": "Type of stats, e.g., graphite or prometheus",
+                    "type": "string",
+                    "example": "graphite"
+                }
+            }
+        },
+        "models.configTun": {
+            "type": "object",
+            "properties": {
+                "dev": {
+                    "description": "Dev specifies the name of the TUN device to use. If not set, the OS will choose a default.\nFor macOS: Must be in the form ` + "`" + `utun[0-9]+` + "`" + `.\nFor NetBSD: Must be in the form ` + "`" + `tun[0-9]+` + "`" + `.",
+                    "type": "string",
+                    "example": "nebula1"
+                },
+                "disabled": {
+                    "description": "When tun is disabled, a lighthouse can be started without a local tun interface (and therefore without root)",
+                    "type": "boolean",
+                    "example": false
+                },
+                "dropLocalBroadcast": {
+                    "description": "DropLocalBroadcast toggles forwarding of local broadcast packets.\nThe address depends on the IP/mask encoded in the PKI certificate.",
+                    "type": "boolean",
+                    "example": false
+                },
+                "dropMulticast": {
+                    "description": "DropMulticast toggles forwarding of multicast packets.",
+                    "type": "boolean",
+                    "example": false
+                },
+                "mtu": {
+                    "description": "MTU defines the maximum transmission unit for each packet. The safe default for internet-based traffic is 1300.",
+                    "type": "integer",
+                    "example": 1300
+                },
+                "routes": {
+                    "description": "Routes defines the network routes that should be added for this TUN interface with MTU overrides.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.configRoute"
+                    }
+                },
+                "txQueue": {
+                    "description": "TxQueue sets the transmit queue length. It can help prevent packet drops if increased.\nThe default value is 500.",
+                    "type": "integer",
+                    "example": 500
+                },
+                "unsafeRoutes": {
+                    "description": "UnsafeRoutes defines potentially unsafe routes to non-Nebula nodes.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.configUnsafeRoute"
+                    }
+                },
+                "useSystemRouteTable": {
+                    "description": "UseSystemRouteTable allows controlling unsafe routes directly in the system's route table (Linux only).",
+                    "type": "boolean",
+                    "example": false
+                }
+            }
+        },
+        "models.configUnsafeRoute": {
+            "type": "object",
+            "properties": {
+                "install": {
+                    "description": "Install flag controls whether the route should be installed in the system's routing table.",
+                    "type": "boolean",
+                    "example": true
+                },
+                "metric": {
+                    "description": "Metric for the unsafe route.",
+                    "type": "integer",
+                    "example": 100
+                },
+                "mtu": {
+                    "description": "MTU for the unsafe route. If not set, the default TUN MTU will be used.",
+                    "type": "integer",
+                    "example": 1300
+                },
+                "route": {
+                    "description": "Route is the destination network in CIDR format.",
+                    "type": "string",
+                    "example": "172.16.1.0/24"
+                },
+                "via": {
+                    "description": "Via is the gateway IP address for the unsafe route.",
+                    "type": "string",
+                    "example": "192.168.100.99"
                 }
             }
         }

@@ -69,6 +69,17 @@ definitions:
         - $ref: '#/definitions/api.metadata'
         description: Metadata contains additional info like the total count.
     type: object
+  models.CalculatedRemote:
+    properties:
+      mask:
+        description: Mask defines the network range used to calculate the remote IP.
+        example: 192.168.1.0/24
+        type: string
+      port:
+        description: Port defines the port to be used for the calculated remote IP.
+        example: 4242
+        type: integer
+    type: object
   models.Certificate:
     properties:
       createdAt:
@@ -96,6 +107,91 @@ definitions:
       updatedAt:
         type: string
     type: object
+  models.Configuration:
+    properties:
+      cipher:
+        description: |-
+          Cipher allows you to choose between the available ciphers for your network. Options are chachapoly or aes
+          IMPORTANT: this value must be identical on ALL NODES/LIGHTHOUSES. We do not/will not support use of different ciphers simultaneously!
+        example: aes
+        type: string
+      firewall:
+        allOf:
+        - $ref: '#/definitions/models.configFirewall'
+        description: Nebula security group configuration
+      handshakes:
+        $ref: '#/definitions/models.configHandshakes'
+      lighthouse:
+        $ref: '#/definitions/models.configLighthouse'
+      listen:
+        allOf:
+        - $ref: '#/definitions/models.configListen'
+        description: |-
+          Port Nebula will be listening on. The default here is 4242. For a lighthouse node, the port should be defined,
+          however using port 0 will dynamically assign a port and is recommended for roaming nodes.
+      localRange:
+        type: string
+      logging:
+        $ref: '#/definitions/models.configLogging'
+      pki:
+        allOf:
+        - $ref: '#/definitions/models.configPKI'
+        description: 'PKI defines the location of credentials for this node. Each
+          of these can also be inlined by using the yaml ": |" syntax.'
+      preferredRanges:
+        description: |-
+          Preferred ranges is used to define a hint about the local network ranges, which speeds up discovering the fastest
+          path to a network adjacent nebula node.
+          This setting is reloadable.
+        example: 172.16.0.0/24
+        type: string
+      punchy:
+        $ref: '#/definitions/models.configPunchy'
+      relay:
+        allOf:
+        - $ref: '#/definitions/models.configRelay'
+        description: 'EXPERIMENTAL: relay support for networks that can''t establish
+          direct connections.'
+      routines:
+        description: |-
+          Routines is the number of thread pairs to run that consume from the tun and UDP queues.
+          Currently, this defaults to 1 which means we have 1 tun queue reader and 1
+          UDP queue reader. Setting this above one will set IFF_MULTI_QUEUE on the tun
+          device and SO_REUSEPORT on the UDP socket to allow multiple queues.
+          This option is only supported on Linux.
+        example: 1
+        type: integer
+      sshd:
+        allOf:
+        - $ref: '#/definitions/models.configSSHD'
+        description: |-
+          sshd can expose informational and administrative functions via ssh. This can expose informational and administrative
+          functions, and allows manual tweaking of various network settings when debugging or testing.
+      staticHostmap:
+        additionalProperties:
+          items:
+            type: string
+          type: array
+        description: |-
+          The static host map defines a set of hosts with fixed IP addresses on the internet (or any network).
+          A host can have multiple fixed IP addresses defined here, and nebula will try each when establishing a tunnel.
+          The syntax is:
+          "{nebula ip}": ["{routable ip/dns name}:{routable port}"]
+          Example, if your lighthouse has the nebula IP of 192.168.100.1 and has the real ip address of 100.64.22.11 and runs on port 4242:
+        type: object
+      staticMap:
+        allOf:
+        - $ref: '#/definitions/models.configStaticMap'
+        description: The static_map config stanza can be used to configure how the
+          static_host_map behaves.
+      stats:
+        $ref: '#/definitions/models.configStats'
+      tun:
+        allOf:
+        - $ref: '#/definitions/models.configTun'
+        description: 'Configure the private interface. Note: addr is baked into the
+          nebula certificate'
+    type: object
   models.Host:
     properties:
       certificates:
@@ -103,9 +199,7 @@ definitions:
           $ref: '#/definitions/models.Certificate'
         type: array
       configuration:
-        items:
-          type: object
-        type: array
+        $ref: '#/definitions/models.Configuration'
       createdAt:
         type: string
       groups:
@@ -142,9 +236,7 @@ definitions:
   models.HostDto:
     properties:
       configuration:
-        items:
-          type: object
-        type: array
+        $ref: '#/definitions/models.Configuration'
       groups:
         example:
         - laptop
@@ -170,7 +262,7 @@ definitions:
       networkId:
         example: c6d6c4c4-b65b-40e1-bcf2-1fd3122c653d
         type: string
-      static_addresses:
+      staticAddresses:
         example:
         - 109.243.69.39
         items:
@@ -302,6 +394,554 @@ definitions:
         items:
           type: string
         type: array
+    type: object
+  models.configAuthorizedUser:
+    properties:
+      keys:
+        description: Keys is a list of authorized SSH public keys for the user. It
+          can contain multiple keys.
+        example:
+        - ssh public key string
+        items:
+          type: string
+        type: array
+      name:
+        description: Name specifies the username for SSH access.
+        example: steeeeve
+        type: string
+    type: object
+  models.configConnTrack:
+    properties:
+      defaultTimeout:
+        description: Default connection timeout
+        example: 10m
+        type: string
+      tcpTimeout:
+        description: TCP connection timeout
+        example: 12m
+        type: string
+      udpTimeout:
+        description: UDP connection timeout
+        example: 3m
+        type: string
+    type: object
+  models.configDNS:
+    properties:
+      host:
+        description: Host defines the DNS IP address to bind the DNS listener to.
+          This can also bind to the Nebula node IP.
+        example: 0.0.0.0
+        type: string
+      port:
+        description: Port defines the port for the DNS listener, typically 53.
+        example: 53
+        type: integer
+    type: object
+  models.configFirewall:
+    properties:
+      connTrack:
+        allOf:
+        - $ref: '#/definitions/models.configConnTrack'
+        description: Connection tracking configuration
+      defaultLocalCIDRAny:
+        description: |-
+          Controls the default value for local_cidr. Default is true, will be deprecated after v1.9 and defaulted to false.
+          This setting only affects nebula hosts with subnets encoded in their certificate. A nebula host acting as an
+          unsafe router with `default_local_cidr_any: true` will expose their unsafe routes to every inbound rule regardless
+          of the actual destination for the packet. Setting this to false requires each inbound rule to contain a `local_cidr`
+          if the intention is to allow traffic to flow to an unsafe route.
+        example: true
+        type: boolean
+      inbound:
+        description: Inbound firewall rules
+        items:
+          $ref: '#/definitions/models.configFirewallRule'
+        type: array
+      inboundAction:
+        description: Action for unmatched inbound packets
+        example: drop
+        type: string
+      outbound:
+        description: Outbound firewall rules
+        items:
+          $ref: '#/definitions/models.configFirewallRule'
+        type: array
+      outboundAction:
+        description: Action for unmatched outbound packets
+        example: drop
+        type: string
+    type: object
+  models.configFirewallRule:
+    properties:
+      caName:
+        description: Certificate authority name
+        example: An issuing CA name
+        type: string
+      caSha:
+        description: Certificate authority SHA
+        example: An issuing CA shasum
+        type: string
+      cidr:
+        description: Remote CIDR to match
+        type: string
+      code:
+        description: ICMP code (for ICMP-specific rules)
+        example: any
+        type: string
+      group:
+        description: Specific group to match
+        type: string
+      groups:
+        description: Multiple groups to match (AND logic)
+        items:
+          type: string
+        type: array
+      host:
+        description: Specific host to match
+        type: string
+      localCIDR:
+        description: Local CIDR for unsafe routes
+        type: string
+      port:
+        description: Port or range of ports
+        example: "80"
+        type: string
+      proto:
+        description: Protocol
+        example: tcp
+        type: string
+    type: object
+  models.configHandshakes:
+    properties:
+      queryBuffer:
+        description: Size of the buffer channel for querying lighthouses
+        example: 64
+        type: integer
+      retries:
+        description: Number of retries for handshakes
+        example: 20
+        type: integer
+      triggerBuffer:
+        description: Size of the buffer channel for quickly sending handshakes
+        example: 64
+        type: integer
+      tryInterval:
+        description: Time interval between handshake retries
+        example: 100ms
+        type: string
+    type: object
+  models.configLighthouse:
+    properties:
+      advertiseAddrs:
+        description: |-
+          AdvertiseAddrs are routable addresses that will be included with discovered addresses to report to the lighthouse.
+          This is mainly used for static IPs or port forwarding scenarios where Nebula might not automatically discover them.
+        example:
+        - 1.1.1.1:4242
+        - 1.2.3.4:0
+        items:
+          type: string
+        type: array
+      amLighthouse:
+        description: |-
+          AmLighthouse is used to enable lighthouse functionality for a node. This should ONLY be true on nodes
+          you have configured to be lighthouses in your network.
+        example: false
+        type: boolean
+      calculatedRemotes:
+        additionalProperties:
+          items:
+            $ref: '#/definitions/models.CalculatedRemote'
+          type: array
+        description: |-
+          CalculatedRemotes is an experimental feature that allows for "guessing" the remote IPs based on Nebula IPs,
+          while waiting for the lighthouse response.
+        type: object
+      dns:
+        allOf:
+        - $ref: '#/definitions/models.configDNS'
+        description: DNS holds the DNS configuration for this node.
+      hosts:
+        description: |-
+          Hosts is a list of lighthouse hosts this node should report to and query from.
+          IMPORTANT: THIS SHOULD BE EMPTY ON LIGHTHOUSE NODES
+          IMPORTANT2: THIS SHOULD BE LIGHTHOUSES' NEBULA IPs, NOT LIGHTHOUSES' REAL ROUTABLE IPs
+        example:
+        - 192.168.100.1
+        items:
+          type: string
+        type: array
+      interval:
+        description: |-
+          Interval is the number of seconds between updates from this node to a lighthouse.
+          During updates, a node sends information about its current IP addresses to each node.
+        example: 60
+        type: integer
+      localAllowList:
+        additionalProperties: true
+        description: |-
+          LocalAllowList is a map of local hosts that are allowed to communicate with this node.
+          The key is the host's IP address, and the value is an arbitrary interface{} for future extensibility.
+        type: object
+      remoteAllowList:
+        additionalProperties:
+          type: boolean
+        description: |-
+          RemoteAllowList is a map of remote hosts that are allowed to communicate with this node.
+          The key is the host's IP address, and the value is a boolean indicating if it's allowed.
+        example:
+          0.0.0.0/0: false
+          172.16.0.0/12: true
+        type: object
+      remoteAllowRanges:
+        additionalProperties:
+          additionalProperties:
+            type: boolean
+          type: object
+        description: |-
+          RemoteAllowRanges defines more specific remote IP rules for VPN CIDR ranges.
+          This feature is experimental and may change in the future.
+        type: object
+      serveDns:
+        description: |-
+          ServeDNS optionally starts a DNS listener that responds to various queries and can even be
+          delegated to for resolution.
+        example: false
+        type: boolean
+    type: object
+  models.configListen:
+    properties:
+      batch:
+        description: |-
+          Batch sets the maximum number of packets to pull from the kernel for each syscall.
+          This is used in systems that support recvmmsg (a system call for receiving multiple messages).
+          The default value is 64, and it cannot be reloaded dynamically.
+        example: 64
+        type: integer
+      host:
+        description: Host defines the IP address to listen on. To listen on all interfaces,
+          use "0.0.0.0" (IPv4) or "::" (IPv6).
+        example: '[::]'
+        type: string
+      port:
+        description: Port defines the port to listen on. This should be an open port
+          on the system.
+        example: 4242
+        type: integer
+      readBuffer:
+        description: |-
+          ReadBuffer defines the size of the read buffer for the UDP socket. This can be adjusted for performance,
+          especially if the system is receiving a high volume of traffic. The default value is set to 10 MB.
+          This value can be configured in the system's network settings.
+        example: 10485760
+        type: integer
+      sendRecvError:
+        description: |-
+          SendRecvError controls whether Nebula sends "recv_error" packets when it receives data on an unknown tunnel.
+          These packets can help with reconnecting after an abnormal shutdown but could potentially leak information about
+          the system's state. Valid values: "always", "never", or "private".
+          "always" sends the packet in all cases, "never" disables it, and "private" sends it only to private network remotes.
+        example: always
+        type: string
+      writeBuffer:
+        description: |-
+          WriteBuffer defines the size of the write buffer for the UDP socket. Similar to ReadBuffer, it controls
+          the buffer size for outgoing packets. The default value is set to 10 MB.
+        example: 10485760
+        type: integer
+    type: object
+  models.configLogging:
+    properties:
+      disableTimestamp:
+        description: DisableTimestamp controls whether timestamps are logged. Defaults
+          to false.
+        example: false
+        type: boolean
+      format:
+        description: |-
+          Format specifies the format of the log output.
+          Available options are: json or text.
+        example: text
+        type: string
+      level:
+        description: |-
+          Level specifies the logging level.
+          Available options are: panic, fatal, error, warning, info, or debug.
+        example: info
+        type: string
+      timestampFormat:
+        description: |-
+          TimestampFormat specifies the format for timestamps in the log output.
+          Uses Go's time format constants. Leave empty for default behavior.
+        example: 2006-01-02T15:04:05.000Z07:00
+        type: string
+    type: object
+  models.configPKI:
+    properties:
+      blacklist:
+        description: A list of certificate fingerprints that should be blocked. These
+          are certificates the node will not communicate with.
+        example:
+        - c99d4e650533b92061b09918e838a5a0a6aaee21eed1d12fd937682865936c72
+        items:
+          type: string
+        type: array
+      ca:
+        description: The CA certificate path, used to validate other certificates.
+          Typically located in '/etc/nebula/ca.crt'.
+        example: /etc/nebula/ca.crt
+        type: string
+      cert:
+        description: The certificate path for this node. Typically located in '/etc/nebula/host.crt'.
+        example: /etc/nebula/host.crt
+        type: string
+      disconnectInvalid:
+        description: Flag to toggle whether to disconnect clients with expired or
+          invalid certificates.
+        example: false
+        type: boolean
+      key:
+        description: The private key path for this node. Typically located in '/etc/nebula/host.key'.
+        example: /etc/nebula/host.key
+        type: string
+    type: object
+  models.configPunchy:
+    properties:
+      delay:
+        description: |-
+          Delay specifies the delay before attempting a punch response for misbehaving NATs. This is particularly useful
+          when dealing with NATs that behave incorrectly. The default value is "1s".
+        example: 1s
+        type: string
+      punch:
+        description: |-
+          Punch defines whether the node should continuously attempt to punch inbound and outbound NAT mappings.
+          This helps avoid the expiration of firewall NAT mappings, ensuring the connection remains active.
+        example: true
+        type: boolean
+      respond:
+        description: |-
+          Respond defines whether the node should connect back if a hole-punching attempt fails. This is useful for
+          situations where one node is behind a difficult NAT (such as symmetric NAT), allowing it to establish a connection.
+          The default value is false.
+        example: false
+        type: boolean
+      respondDelay:
+        description: |-
+          RespondDelay sets the delay before attempting punchy.respond, which controls how long the node waits
+          before trying to connect back after a failed hole punch. This only applies if `respond` is set to true.
+          The default value is "5s".
+        example: 5s
+        type: string
+    type: object
+  models.configRelay:
+    properties:
+      amRelay:
+        description: Set to true to permit other hosts to list my IP in their relays
+          config. Default is false.
+        example: false
+        type: boolean
+      relays:
+        description: |-
+          List of Nebula IPs that peers can use to relay packets to this instance.
+          IPs in this list must have am_relay set to true in their configs, or they will reject relay requests.
+        example:
+        - 192.168.100.1
+        items:
+          type: string
+        type: array
+      useRelays:
+        description: Set to false to prevent this instance from attempting to establish
+          connections through relays. Default is true.
+        example: true
+        type: boolean
+    type: object
+  models.configRoute:
+    properties:
+      mtu:
+        description: MTU for this specific route. If not set, the default TUN MTU
+          is used.
+        example: 8800
+        type: integer
+      route:
+        description: Route is the destination network in CIDR format for this route.
+        example: 10.0.0.0/16
+        type: string
+    type: object
+  models.configSSHD:
+    properties:
+      authorizedUsers:
+        description: AuthorizedUsers lists the users allowed to authenticate via SSH,
+          along with their corresponding public keys.
+        items:
+          $ref: '#/definitions/models.configAuthorizedUser'
+        type: array
+      enabled:
+        description: Enabled toggles the SSHD feature, allowing SSH access to the
+          node for administrative and debugging tasks.
+        example: true
+        type: boolean
+      hostKey:
+        description: HostKey specifies the file path to the private key used for SSH
+          host identification.
+        example: ./ssh_host_ed25519_key
+        type: string
+      listen:
+        description: Listen specifies the IP address and port that the SSH server
+          should bind to. The default port 22 is not allowed for safety reasons.
+        example: 127.0.0.1:2222
+        type: string
+      trustedCas:
+        description: TrustedCAs is a list of trusted SSH Certificate Authorities (CAs)
+          public keys that can sign SSH user keys.
+        example:
+        - ssh public key string
+        items:
+          type: string
+        type: array
+    type: object
+  models.configStaticMap:
+    properties:
+      cadence:
+        description: Cadence determines how frequently DNS is re-queried for updated
+          IP addresses when a static_host_map entry contains a DNS name.
+        example: 30s
+        type: string
+      lookupTimeout:
+        description: LookupTimeout is the DNS query timeout.
+        example: 250ms
+        type: string
+      network:
+        description: |-
+          Network determines the type of IP addresses to ask the DNS server for.
+          Valid options are "ip4" (default), "ip6", or "ip" (returns both).
+        example: ip4
+        type: string
+    type: object
+  models.configStats:
+    properties:
+      host:
+        description: Host for Graphite,
+        example: 127.0.0.1:9999
+        type: string
+      interval:
+        description: Stats reporting interval
+        example: 10s
+        type: string
+      lighthouseMetrics:
+        description: Enable lighthouse metrics
+        example: false
+        type: boolean
+      listen:
+        description: Fields for Prometheus
+        example: 127.0.0.1:8080
+        type: string
+      messageMetrics:
+        description: Additional fields
+        example: false
+        type: boolean
+      namespace:
+        description: Namespace for Prometheus metrics
+        example: prometheusns
+        type: string
+      path:
+        description: Path for Prometheus metrics
+        example: /metrics
+        type: string
+      prefix:
+        description: Fields for Graphite
+        example: nebula
+        type: string
+      protocol:
+        description: Protocol for Graphite, e.g., "tcp"
+        example: tcp
+        type: string
+      subsystem:
+        description: Subsystem for Prometheus metrics
+        example: nebula
+        type: string
+      type:
+        description: Type of stats, e.g., graphite or prometheus
+        example: graphite
+        type: string
+    type: object
+  models.configTun:
+    properties:
+      dev:
+        description: |-
+          Dev specifies the name of the TUN device to use. If not set, the OS will choose a default.
+          For macOS: Must be in the form `utun[0-9]+`.
+          For NetBSD: Must be in the form `tun[0-9]+`.
+        example: nebula1
+        type: string
+      disabled:
+        description: When tun is disabled, a lighthouse can be started without a local
+          tun interface (and therefore without root)
+        example: false
+        type: boolean
+      dropLocalBroadcast:
+        description: |-
+          DropLocalBroadcast toggles forwarding of local broadcast packets.
+          The address depends on the IP/mask encoded in the PKI certificate.
+        example: false
+        type: boolean
+      dropMulticast:
+        description: DropMulticast toggles forwarding of multicast packets.
+        example: false
+        type: boolean
+      mtu:
+        description: MTU defines the maximum transmission unit for each packet. The
+          safe default for internet-based traffic is 1300.
+        example: 1300
+        type: integer
+      routes:
+        description: Routes defines the network routes that should be added for this
+          TUN interface with MTU overrides.
+        items:
+          $ref: '#/definitions/models.configRoute'
+        type: array
+      txQueue:
+        description: |-
+          TxQueue sets the transmit queue length. It can help prevent packet drops if increased.
+          The default value is 500.
+        example: 500
+        type: integer
+      unsafeRoutes:
+        description: UnsafeRoutes defines potentially unsafe routes to non-Nebula
+          nodes.
+        items:
+          $ref: '#/definitions/models.configUnsafeRoute'
+        type: array
+      useSystemRouteTable:
+        description: UseSystemRouteTable allows controlling unsafe routes directly
+          in the system's route table (Linux only).
+        example: false
+        type: boolean
+    type: object
+  models.configUnsafeRoute:
+    properties:
+      install:
+        description: Install flag controls whether the route should be installed in
+          the system's routing table.
+        example: true
+        type: boolean
+      metric:
+        description: Metric for the unsafe route.
+        example: 100
+        type: integer
+      mtu:
+        description: MTU for the unsafe route. If not set, the default TUN MTU will
+          be used.
+        example: 1300
+        type: integer
+      route:
+        description: Route is the destination network in CIDR format.
+        example: 172.16.1.0/24
+        type: string
+      via:
+        description: Via is the gateway IP address for the unsafe route.
+        example: 192.168.100.99
+        type: string
     type: object
 externalDocs:
   description: OpenAPI
