@@ -129,8 +129,6 @@ definitions:
         description: |-
           Port Nebula will be listening on. The default here is 4242. For a lighthouse node, the port should be defined,
           however using port 0 will dynamically assign a port and is recommended for roaming nodes.
-      localRange:
-        type: string
       logging:
         $ref: '#/definitions/models.configLogging'
       pki:
@@ -143,8 +141,11 @@ definitions:
           Preferred ranges is used to define a hint about the local network ranges, which speeds up discovering the fastest
           path to a network adjacent nebula node.
           This setting is reloadable.
-        example: 172.16.0.0/24
-        type: string
+        example:
+        - 172.16.0.0/24
+        items:
+          type: string
+        type: array
       punchy:
         $ref: '#/definitions/models.configPunchy'
       relay:
@@ -167,18 +168,6 @@ definitions:
         description: |-
           sshd can expose informational and administrative functions via ssh. This can expose informational and administrative
           functions, and allows manual tweaking of various network settings when debugging or testing.
-      staticHostmap:
-        additionalProperties:
-          items:
-            type: string
-          type: array
-        description: |-
-          The static host map defines a set of hosts with fixed IP addresses on the internet (or any network).
-          A host can have multiple fixed IP addresses defined here, and nebula will try each when establishing a tunnel.
-          The syntax is:
-          "{nebula ip}": ["{routable ip/dns name}:{routable port}"]
-          Example, if your lighthouse has the nebula IP of 192.168.100.1 and has the real ip address of 100.64.22.11 and runs on port 4242:
-        type: object
       staticMap:
         allOf:
         - $ref: '#/definitions/models.configStaticMap'
@@ -194,10 +183,8 @@ definitions:
     type: object
   models.Host:
     properties:
-      certificates:
-        items:
-          $ref: '#/definitions/models.Certificate'
-        type: array
+      certificate:
+        $ref: '#/definitions/models.Certificate'
       configuration:
         $ref: '#/definitions/models.Configuration'
       createdAt:
@@ -212,10 +199,6 @@ definitions:
         type: string
       ip:
         type: string
-      isLighthouse:
-        type: boolean
-      listenPort:
-        type: integer
       name:
         type: string
       network:
@@ -250,12 +233,6 @@ definitions:
       ip:
         example: 100.100.0.1/24
         type: string
-      isLighthouse:
-        example: false
-        type: boolean
-      listenPort:
-        example: 4242
-        type: integer
       name:
         example: host-1
         type: string
@@ -490,14 +467,20 @@ definitions:
         type: string
       group:
         description: Specific group to match
+        example: laptop
         type: string
       groups:
         description: Multiple groups to match (AND logic)
+        example:
+        - laptop
+        - servers
+        - ssh
         items:
           type: string
         type: array
       host:
         description: Specific host to match
+        example: any
         type: string
       localCIDR:
         description: Local CIDR for unsafe routes
@@ -561,16 +544,6 @@ definitions:
         allOf:
         - $ref: '#/definitions/models.configDNS'
         description: DNS holds the DNS configuration for this node.
-      hosts:
-        description: |-
-          Hosts is a list of lighthouse hosts this node should report to and query from.
-          IMPORTANT: THIS SHOULD BE EMPTY ON LIGHTHOUSE NODES
-          IMPORTANT2: THIS SHOULD BE LIGHTHOUSES' NEBULA IPs, NOT LIGHTHOUSES' REAL ROUTABLE IPs
-        example:
-        - 192.168.100.1
-        items:
-          type: string
-        type: array
       interval:
         description: |-
           Interval is the number of seconds between updates from this node to a lighthouse.
@@ -779,7 +752,7 @@ definitions:
       enabled:
         description: Enabled toggles the SSHD feature, allowing SSH access to the
           node for administrative and debugging tasks.
-        example: true
+        example: false
         type: boolean
       hostKey:
         description: HostKey specifies the file path to the private key used for SSH
@@ -1094,7 +1067,7 @@ paths:
       summary: Get a host by ID
       tags:
       - hosts
-    patch:
+    put:
       consumes:
       - application/json
       description: Update the details of an existing host
@@ -1126,6 +1099,34 @@ paths:
           schema:
             $ref: '#/definitions/api.errorResponse'
       summary: Update a host
+      tags:
+      - hosts
+  /hosts/{id}/config.yml:
+    get:
+      description: Retrieve the YAML configuration of a single host by its ID. Optionally,
+        download the configuration as a file.
+      parameters:
+      - description: Host ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Set this parameter to trigger file download (e.g., ?download=true)
+        in: query
+        name: download
+        type: string
+      produces:
+      - application/x-yaml
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.errorResponse'
+      summary: Get a host's configuration in YAML format
       tags:
       - hosts
   /networks:

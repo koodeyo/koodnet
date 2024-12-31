@@ -15,7 +15,7 @@ type Configuration struct {
 	// The syntax is:
 	// "{nebula ip}": ["{routable ip/dns name}:{routable port}"]
 	// Example, if your lighthouse has the nebula IP of 192.168.100.1 and has the real ip address of 100.64.22.11 and runs on port 4242:
-	StaticHostmap map[string][]string `yaml:"static_host_map,omitempty" json:"staticHostmap" gorm:"serializer:json"`
+	StaticHostMap map[string][]string `yaml:"static_host_map,omitempty" json:"-" gorm:"serializer:json"`
 
 	// The static_map config stanza can be used to configure how the static_host_map behaves.
 	StaticMap configStaticMap `yaml:"static_map,omitempty" json:"staticMap" gorm:"serializer:json"`
@@ -31,7 +31,7 @@ type Configuration struct {
 	// UDP queue reader. Setting this above one will set IFF_MULTI_QUEUE on the tun
 	// device and SO_REUSEPORT on the UDP socket to allow multiple queues.
 	// This option is only supported on Linux.
-	Routines uint `yaml:"routines,omitempty" json:"routines" example:"1" gorm:"default:1"`
+	Routines uint `yaml:"routines,omitempty" json:"routines" example:"1"`
 
 	Punchy configPunchy `yaml:"punchy,omitempty" json:"punchy" gorm:"serializer:json"`
 
@@ -42,9 +42,7 @@ type Configuration struct {
 	// Preferred ranges is used to define a hint about the local network ranges, which speeds up discovering the fastest
 	// path to a network adjacent nebula node.
 	// This setting is reloadable.
-	PreferredRanges string `yaml:"preferred_ranges,omitempty" json:"preferredRanges" example:"172.16.0.0/24"`
-
-	LocalRange string `yaml:"local_range,omitempty" json:"localRange"`
+	PreferredRanges []string `yaml:"preferred_ranges,omitempty" json:"preferredRanges" gorm:"serializer:json" example:"172.16.0.0/24"`
 
 	// sshd can expose informational and administrative functions via ssh. This can expose informational and administrative
 	// functions, and allows manual tweaking of various network settings when debugging or testing.
@@ -65,25 +63,25 @@ type Configuration struct {
 	// EXPERIMENTAL: relay support for networks that can't establish direct connections.
 	Relay configRelay `yaml:"relay,omitempty" json:"relay" gorm:"serializer:json"`
 
-	// model
-	ID        uuid.UUID `yaml:"id,omitempty" json:"id,omitempty" gorm:"type:uuid;primary_key;" swaggerignore:"true"`
-	OwnerID   uuid.UUID `yaml:"owner_id,omitempty" json:"ownerId,omitempty" gorm:"type:uuid;not null;" swaggerignore:"true"`
-	OwnerType string    `yaml:"owner_type,omitempty" json:"ownerType,omitempty" gorm:"not null" swaggerignore:"true"`
-	CreatedAt time.Time `yaml:"created_at,omitempty" json:"createdAt,omitempty" gorm:"autoCreateTime" swaggerignore:"true"`
-	UpdatedAt time.Time `yaml:"updated_at,omitempty" json:"updatedAt,omitempty" gorm:"autoUpdateTime" swaggerignore:"true"`
+	// Non Nebula Fields
+	ID        uuid.UUID `yaml:"-" json:"id" gorm:"type:uuid;primary_key;" swaggerignore:"true"`
+	HostID    uuid.UUID `yaml:"-" json:"-" gorm:"type:uuid"`
+	Host      *Host     `yaml:"-" json:"-"`
+	CreatedAt time.Time `yaml:"-" json:"createdAt,omitempty" gorm:"autoCreateTime" swaggerignore:"true"`
+	UpdatedAt time.Time `yaml:"-" json:"updatedAt,omitempty" gorm:"autoUpdateTime" swaggerignore:"true"`
 }
 
 // The configStaticMap config stanza can be used to configure how the static_host_map behaves.
 type configStaticMap struct {
 	// Cadence determines how frequently DNS is re-queried for updated IP addresses when a static_host_map entry contains a DNS name.
-	Cadence string `yaml:"cadence" json:"cadence" example:"30s" gorm:"default:'30s'"`
+	Cadence string `yaml:"cadence" json:"cadence" example:"30s"`
 
 	// Network determines the type of IP addresses to ask the DNS server for.
 	// Valid options are "ip4" (default), "ip6", or "ip" (returns both).
-	Network string `yaml:"network" json:"network" example:"ip4" gorm:"default:'ip4'"`
+	Network string `yaml:"network" json:"network" example:"ip4"`
 
 	// LookupTimeout is the DNS query timeout.
-	LookupTimeout string `yaml:"lookup_timeout" json:"lookupTimeout" example:"250ms" gorm:"default:'250ms'"`
+	LookupTimeout string `yaml:"lookup_timeout" json:"lookupTimeout" example:"250ms"`
 }
 
 // configPKI defines the structure for storing Public Key Infrastructure (PKI) credentials and associated data.
@@ -98,33 +96,33 @@ type configPKI struct {
 	Key string `yaml:"key,omitempty" json:"key" example:"/etc/nebula/host.key"`
 
 	// A list of certificate fingerprints that should be blocked. These are certificates the node will not communicate with.
-	Blacklist []string `yaml:"blacklist,omitempty" json:"blacklist" example:"c99d4e650533b92061b09918e838a5a0a6aaee21eed1d12fd937682865936c72" gorm:"default:'[]'"`
+	Blacklist []string `yaml:"blacklist,omitempty" json:"blacklist" example:"c99d4e650533b92061b09918e838a5a0a6aaee21eed1d12fd937682865936c72"`
 
 	// Flag to toggle whether to disconnect clients with expired or invalid certificates.
-	DisconnectInvalid bool `yaml:"disconnect_invalid,omitempty" json:"disconnectInvalid" example:"false" gorm:"default:false"`
+	DisconnectInvalid bool `yaml:"disconnect_invalid,omitempty" json:"disconnectInvalid" example:"false"`
 }
 
 // configLighthouse defines the configuration for lighthouse functionality in the network.
 type configLighthouse struct {
 	// AmLighthouse is used to enable lighthouse functionality for a node. This should ONLY be true on nodes
 	// you have configured to be lighthouses in your network.
-	AmLighthouse bool `yaml:"am_lighthouse,omitempty" json:"amLighthouse" example:"false" gorm:"default:false"`
+	AmLighthouse bool `yaml:"am_lighthouse" json:"amLighthouse" example:"false"`
 
 	// ServeDNS optionally starts a DNS listener that responds to various queries and can even be
 	// delegated to for resolution.
-	ServeDNS bool `yaml:"serve_dns,omitempty" json:"serveDns" example:"false" gorm:"default:false"`
+	ServeDNS bool `yaml:"serve_dns" json:"serveDns" example:"false"`
 
 	// DNS holds the DNS configuration for this node.
 	DNS configDNS `yaml:"dns,omitempty" json:"dns"`
 
 	// Interval is the number of seconds between updates from this node to a lighthouse.
 	// During updates, a node sends information about its current IP addresses to each node.
-	Interval uint `yaml:"interval,omitempty" json:"interval" example:"60" gorm:"default:60"`
+	Interval uint `yaml:"interval,omitempty" json:"interval" example:"60"`
 
 	// Hosts is a list of lighthouse hosts this node should report to and query from.
 	// IMPORTANT: THIS SHOULD BE EMPTY ON LIGHTHOUSE NODES
 	// IMPORTANT2: THIS SHOULD BE LIGHTHOUSES' NEBULA IPs, NOT LIGHTHOUSES' REAL ROUTABLE IPs
-	Hosts []string `yaml:"hosts,omitempty" json:"hosts" example:"192.168.100.1" gorm:"default:'[]'"`
+	Hosts []string `yaml:"hosts,omitempty" json:"-" example:"192.168.100.1"`
 
 	// RemoteAllowList is a map of remote hosts that are allowed to communicate with this node.
 	// The key is the host's IP address, and the value is a boolean indicating if it's allowed.
@@ -168,57 +166,57 @@ type CalculatedRemote struct {
 // configListen defines the configuration for listening on a specific host and port for network traffic.
 type configListen struct {
 	// Host defines the IP address to listen on. To listen on all interfaces, use "0.0.0.0" (IPv4) or "::" (IPv6).
-	Host string `yaml:"host,omitempty" json:"host" example:"[::]" gorm:"default:'[::]'"`
+	Host string `yaml:"host,omitempty" json:"host" example:"[::]"`
 
 	// Port defines the port to listen on. This should be an open port on the system.
-	Port uint `yaml:"port,omitempty" json:"port" example:"4242" gorm:"default:4242"`
+	Port uint `yaml:"port,omitempty" json:"port" example:"4242"`
 
 	// Batch sets the maximum number of packets to pull from the kernel for each syscall.
 	// This is used in systems that support recvmmsg (a system call for receiving multiple messages).
 	// The default value is 64, and it cannot be reloaded dynamically.
-	Batch uint `yaml:"batch,omitempty" json:"batch" example:"64" gorm:"default:64"`
+	Batch uint `yaml:"batch,omitempty" json:"batch" example:"64"`
 
 	// ReadBuffer defines the size of the read buffer for the UDP socket. This can be adjusted for performance,
 	// especially if the system is receiving a high volume of traffic. The default value is set to 10 MB.
 	// This value can be configured in the system's network settings.
-	ReadBuffer int64 `yaml:"read_buffer,omitempty" json:"readBuffer" example:"10485760" gorm:"default:10485760"`
+	ReadBuffer int64 `yaml:"read_buffer,omitempty" json:"readBuffer" example:"10485760"`
 
 	// WriteBuffer defines the size of the write buffer for the UDP socket. Similar to ReadBuffer, it controls
 	// the buffer size for outgoing packets. The default value is set to 10 MB.
-	WriteBuffer int64 `yaml:"write_buffer,omitempty" json:"writeBuffer" example:"10485760" gorm:"default:10485760"`
+	WriteBuffer int64 `yaml:"write_buffer,omitempty" json:"writeBuffer" example:"10485760"`
 
 	// SendRecvError controls whether Nebula sends "recv_error" packets when it receives data on an unknown tunnel.
 	// These packets can help with reconnecting after an abnormal shutdown but could potentially leak information about
 	// the system's state. Valid values: "always", "never", or "private".
 	// "always" sends the packet in all cases, "never" disables it, and "private" sends it only to private network remotes.
-	SendRecvError string `yaml:"send_recv_error,omitempty" json:"sendRecvError" example:"always" gorm:"default:'always'"`
+	SendRecvError string `yaml:"send_recv_error,omitempty" json:"sendRecvError" example:"always"`
 }
 
 // configPunchy defines the configuration for NAT hole punching and response behavior in the network.
 type configPunchy struct {
 	// Punch defines whether the node should continuously attempt to punch inbound and outbound NAT mappings.
 	// This helps avoid the expiration of firewall NAT mappings, ensuring the connection remains active.
-	Punch bool `yaml:"punch,omitempty" json:"punch" example:"true" gorm:"default:true"`
+	Punch bool `yaml:"punch,omitempty" json:"punch" example:"true"`
 
 	// Respond defines whether the node should connect back if a hole-punching attempt fails. This is useful for
 	// situations where one node is behind a difficult NAT (such as symmetric NAT), allowing it to establish a connection.
 	// The default value is false.
-	Respond bool `yaml:"respond,omitempty" json:"respond" example:"false" gorm:"default:false"`
+	Respond bool `yaml:"respond,omitempty" json:"respond" example:"false"`
 
 	// Delay specifies the delay before attempting a punch response for misbehaving NATs. This is particularly useful
 	// when dealing with NATs that behave incorrectly. The default value is "1s".
-	Delay string `yaml:"delay,omitempty" json:"delay" example:"1s" gorm:"default:'1s'"`
+	Delay string `yaml:"delay,omitempty" json:"delay" example:"1s"`
 
 	// RespondDelay sets the delay before attempting punchy.respond, which controls how long the node waits
 	// before trying to connect back after a failed hole punch. This only applies if `respond` is set to true.
 	// The default value is "5s".
-	RespondDelay string `yaml:"respond_delay,omitempty" json:"respondDelay" example:"5s" gorm:"default:'5s'"`
+	RespondDelay string `yaml:"respond_delay,omitempty" json:"respondDelay" example:"5s"`
 }
 
 // configSSHD defines the configuration for exposing informational and administrative functions via SSH.
 type configSSHD struct {
 	// Enabled toggles the SSHD feature, allowing SSH access to the node for administrative and debugging tasks.
-	Enabled bool `yaml:"enabled,omitempty" json:"enabled" example:"true" gorm:"default:true"`
+	Enabled bool `yaml:"enabled,omitempty" json:"enabled" example:"false"`
 
 	// Listen specifies the IP address and port that the SSH server should bind to. The default port 22 is not allowed for safety reasons.
 	Listen string `yaml:"listen,omitempty" json:"listen" example:"127.0.0.1:2222"`
@@ -245,26 +243,26 @@ type configAuthorizedUser struct {
 // configTun defines the configuration for the private network interface (TUN).
 type configTun struct {
 	// When tun is disabled, a lighthouse can be started without a local tun interface (and therefore without root)
-	Disabled bool `yaml:"disabled,omitempty" json:"disabled" example:"false" gorm:"default:false"`
+	Disabled bool `yaml:"disabled,omitempty" json:"disabled" example:"false"`
 
 	// Dev specifies the name of the TUN device to use. If not set, the OS will choose a default.
 	// For macOS: Must be in the form `utun[0-9]+`.
 	// For NetBSD: Must be in the form `tun[0-9]+`.
-	Dev string `yaml:"dev,omitempty" json:"dev" example:"nebula1" gorm:"default:'nebula1'"`
+	Dev string `yaml:"dev,omitempty" json:"dev" example:"nebula1"`
 
 	// DropLocalBroadcast toggles forwarding of local broadcast packets.
 	// The address depends on the IP/mask encoded in the PKI certificate.
-	DropLocalBroadcast bool `yaml:"drop_local_broadcast,omitempty" json:"dropLocalBroadcast" example:"false" gorm:"default:false"`
+	DropLocalBroadcast bool `yaml:"drop_local_broadcast,omitempty" json:"dropLocalBroadcast" example:"false"`
 
 	// DropMulticast toggles forwarding of multicast packets.
-	DropMulticast bool `yaml:"drop_multicast,omitempty" json:"dropMulticast" example:"false" gorm:"default:false"`
+	DropMulticast bool `yaml:"drop_multicast,omitempty" json:"dropMulticast" example:"false"`
 
 	// TxQueue sets the transmit queue length. It can help prevent packet drops if increased.
 	// The default value is 500.
-	TxQueue uint `yaml:"tx_queue,omitempty" json:"txQueue" example:"500" gorm:"default:500"`
+	TxQueue uint `yaml:"tx_queue,omitempty" json:"txQueue" example:"500"`
 
 	// MTU defines the maximum transmission unit for each packet. The safe default for internet-based traffic is 1300.
-	MTU uint `yaml:"mtu,omitempty" json:"mtu" example:"1300" gorm:"default:1300"`
+	MTU uint `yaml:"mtu,omitempty" json:"mtu" example:"1300"`
 
 	// Routes defines the network routes that should be added for this TUN interface with MTU overrides.
 	Routes []configRoute `yaml:"routes,omitempty" json:"routes"`
@@ -273,7 +271,7 @@ type configTun struct {
 	UnsafeRoutes []configUnsafeRoute `yaml:"unsafe_routes,omitempty" json:"unsafeRoutes"`
 
 	// UseSystemRouteTable allows controlling unsafe routes directly in the system's route table (Linux only).
-	UseSystemRouteTable bool `yaml:"use_system_route_table,omitempty" json:"useSystemRouteTable" example:"false" gorm:"default:false"`
+	UseSystemRouteTable bool `yaml:"use_system_route_table,omitempty" json:"useSystemRouteTable" example:"false"`
 }
 
 // configRoute defines a route to be added to the TUN interface with optional MTU overrides.
@@ -306,23 +304,23 @@ type configUnsafeRoute struct {
 type configLogging struct {
 	// Level specifies the logging level.
 	// Available options are: panic, fatal, error, warning, info, or debug.
-	Level string `yaml:"level,omitempty" json:"level" example:"info" gorm:"default:'info'"`
+	Level string `yaml:"level,omitempty" json:"level" example:"info"`
 
 	// Format specifies the format of the log output.
 	// Available options are: json or text.
-	Format string `yaml:"format,omitempty" json:"format" example:"text" gorm:"default:'text'"`
+	Format string `yaml:"format,omitempty" json:"format" example:"text"`
 
 	// DisableTimestamp controls whether timestamps are logged. Defaults to false.
-	DisableTimestamp bool `yaml:"disable_timestamp,omitempty" json:"disableTimestamp" example:"false" gorm:"default:false"`
+	DisableTimestamp bool `yaml:"disable_timestamp,omitempty" json:"disableTimestamp" example:"false"`
 
 	// TimestampFormat specifies the format for timestamps in the log output.
 	// Uses Go's time format constants. Leave empty for default behavior.
-	TimestampFormat string `yaml:"timestamp_format,omitempty,omitempty" json:"timestampFormat" example:"2006-01-02T15:04:05.000Z07:00" gorm:"default:'2006-01-02T15:04:05Z07:00'"`
+	TimestampFormat string `yaml:"timestamp_format,omitempty,omitempty" json:"timestampFormat" example:"2006-01-02T15:04:05.000Z07:00"`
 }
 
 type configStats struct {
-	Type     string `yaml:"type" json:"type" example:"graphite" enum:"graphite,prometheus"`        // Type of stats, e.g., graphite or prometheus
-	Interval string `yaml:"interval,omitempty" json:"interval" example:"10s" gorm:"default:'10s'"` // Stats reporting interval
+	Type     string `yaml:"type" json:"type" example:"graphite" enum:"graphite,prometheus"` // Type of stats, e.g., graphite or prometheus
+	Interval string `yaml:"interval,omitempty" json:"interval" example:"10s"`               // Stats reporting interval
 
 	// Fields for Graphite
 	Prefix   string `yaml:"prefix,omitempty" json:"prefix" example:"nebula"`     // Prefix for stats, used in Graphite
@@ -336,38 +334,38 @@ type configStats struct {
 	Subsystem string `yaml:"subsystem,omitempty" json:"subsystem" example:"nebula"`       // Subsystem for Prometheus metrics
 
 	// Additional fields
-	MessageMetrics    bool `yaml:"message_metrics,omitempty" json:"messageMetrics" example:"false" gorm:"default:false"`       // Enable message metrics
-	LighthouseMetrics bool `yaml:"lighthouse_metrics,omitempty" json:"lighthouseMetrics" example:"false" gorm:"default:false"` // Enable lighthouse metrics
+	MessageMetrics    bool `yaml:"message_metrics,omitempty" json:"messageMetrics" example:"false"`       // Enable message metrics
+	LighthouseMetrics bool `yaml:"lighthouse_metrics,omitempty" json:"lighthouseMetrics" example:"false"` // Enable lighthouse metrics
 }
 
 // Handshake Manager Settings
 type configHandshakes struct {
 	// Time interval between handshake retries
-	TryInterval string `yaml:"try_interval,omitempty" json:"tryInterval" example:"100ms" gorm:"default:'100ms'"`
+	TryInterval string `yaml:"try_interval,omitempty" json:"tryInterval" example:"100ms"`
 
 	// Number of retries for handshakes
-	Retries uint `yaml:"retries,omitempty" json:"retries" example:"20" gorm:"default:20"`
+	Retries uint `yaml:"retries,omitempty" json:"retries" example:"20"`
 
 	// Size of the buffer channel for querying lighthouses
-	QueryBuffer uint `yaml:"query_buffer,omitempty" json:"queryBuffer" example:"64" gorm:"default:64"`
+	QueryBuffer uint `yaml:"query_buffer,omitempty" json:"queryBuffer" example:"64"`
 
 	// Size of the buffer channel for quickly sending handshakes
-	TriggerBuffer uint `yaml:"trigger_buffer,omitempty" json:"triggerBuffer" example:"64" gorm:"default:64"`
+	TriggerBuffer uint `yaml:"trigger_buffer,omitempty" json:"triggerBuffer" example:"64"`
 }
 
 type configFirewall struct {
 	// Action for unmatched outbound packets
-	OutboundAction string `yaml:"outbound_action,omitempty" json:"outboundAction" example:"drop" gorm:"default:'drop'"`
+	OutboundAction string `yaml:"outbound_action,omitempty" json:"outboundAction" example:"drop"`
 
 	// Action for unmatched inbound packets
-	InboundAction string `yaml:"inbound_action,omitempty" json:"inboundAction" example:"drop" gorm:"default:'drop'"`
+	InboundAction string `yaml:"inbound_action,omitempty" json:"inboundAction" example:"drop"`
 
 	// Controls the default value for local_cidr. Default is true, will be deprecated after v1.9 and defaulted to false.
 	// This setting only affects nebula hosts with subnets encoded in their certificate. A nebula host acting as an
 	// unsafe router with `default_local_cidr_any: true` will expose their unsafe routes to every inbound rule regardless
 	// of the actual destination for the packet. Setting this to false requires each inbound rule to contain a `local_cidr`
 	// if the intention is to allow traffic to flow to an unsafe route.
-	DefaultLocalCIDRAny bool `yaml:"default_local_cidr_any,omitempty" json:"defaultLocalCIDRAny" example:"true" gorm:"default:true"`
+	DefaultLocalCIDRAny bool `yaml:"default_local_cidr_any,omitempty" json:"defaultLocalCIDRAny" example:"true"`
 
 	// Connection tracking configuration
 	ConnTrack configConnTrack `yaml:"conntrack,omitempty" json:"connTrack"`
@@ -381,33 +379,33 @@ type configFirewall struct {
 
 type configConnTrack struct {
 	// TCP connection timeout
-	TcpTimeout string `yaml:"tcp_timeout,omitempty" json:"tcpTimeout" example:"12m" gorm:"default:'12m'"`
+	TcpTimeout string `yaml:"tcp_timeout,omitempty" json:"tcpTimeout" example:"12m"`
 
 	// UDP connection timeout
-	UdpTimeout string `yaml:"udp_timeout,omitempty" json:"udpTimeout" example:"3m" gorm:"default:'3m'"`
+	UdpTimeout string `yaml:"udp_timeout,omitempty" json:"udpTimeout" example:"3m"`
 
 	// Default connection timeout
-	DefaultTimeout string `yaml:"default_timeout,omitempty" json:"defaultTimeout" example:"10m" gorm:"default:'10m'"`
+	DefaultTimeout string `yaml:"default_timeout,omitempty" json:"defaultTimeout" example:"10m"`
 }
 
 type configFirewallRule struct {
 	// Port or range of ports
-	Port string `yaml:"port,omitempty" json:"port" example:"80" gorm:"default:'any'"`
+	Port string `yaml:"port,omitempty" json:"port" example:"80"`
 
 	// ICMP code (for ICMP-specific rules)
-	Code string `yaml:"code,omitempty" json:"code" example:"any" gorm:"default:'any'"`
+	Code string `yaml:"code,omitempty" json:"code" example:"any"`
 
 	// Protocol
-	Proto string `yaml:"proto,omitempty" json:"proto" example:"tcp" enum:"tcp,udp,icmp" gorm:"default:'any'"`
+	Proto string `yaml:"proto,omitempty" json:"proto" example:"tcp" enum:"tcp,udp,icmp"`
 
 	// Specific host to match
-	Host string `yaml:"host,omitempty" json:"host"`
+	Host string `yaml:"host,omitempty" json:"host" example:"any"`
 
 	// Specific group to match
-	Group string `yaml:"group,omitempty" json:"group"`
+	Group string `yaml:"group,omitempty" json:"group" example:"laptop"`
 
 	// Multiple groups to match (AND logic)
-	Groups []string `yaml:"groups,omitempty" json:"groups"`
+	Groups []string `yaml:"groups,omitempty" json:"groups" example:"laptop,servers,ssh"`
 
 	// Remote CIDR to match
 	CIDR string `yaml:"cidr,omitempty" json:"cidr"`
@@ -424,64 +422,110 @@ type configFirewallRule struct {
 
 type configRelay struct {
 	// Set to true to permit other hosts to list my IP in their relays config. Default is false.
-	AmRelay bool `yaml:"am_relay,omitempty" json:"amRelay" example:"false" gorm:"default:false"`
+	AmRelay bool `yaml:"am_relay" json:"amRelay" example:"false"`
 
 	// Set to false to prevent this instance from attempting to establish connections through relays. Default is true.
-	UseRelays bool `yaml:"use_relays" json:"useRelays" example:"true" gorm:"default:true"`
+	UseRelays bool `yaml:"use_relays" json:"useRelays" example:"true"`
 
 	// List of Nebula IPs that peers can use to relay packets to this instance.
 	// IPs in this list must have am_relay set to true in their configs, or they will reject relay requests.
 	Relays []string `yaml:"relays,omitempty" json:"relays" example:"192.168.100.1"`
 }
 
-func NewConfig() *Configuration {
+func newConfig() *Configuration {
 	return &Configuration{
+		ID: uuid.New(),
 		PKI: configPKI{
-			Blacklist: []string{},
+			CA:                "/etc/nebula/ca.crt",
+			Cert:              "/etc/nebula/host.crt",
+			Key:               "/etc/nebula/host.key",
+			DisconnectInvalid: false,
+			Blacklist:         []string{},
 		},
-		StaticHostmap: map[string][]string{},
+		StaticHostMap: make(map[string][]string),
+		StaticMap:     configStaticMap{
+			// Cadence:       "30s",
+			// Network:       "ip4",
+			// LookupTimeout: "250ms",
+		},
+		PreferredRanges: []string{},
 		Lighthouse: configLighthouse{
-			DNS:      configDNS{},
-			Interval: 60,
-			Hosts:    []string{},
+			AmLighthouse:      false,
+			ServeDNS:          false,
+			Interval:          60,
+			Hosts:             []string{},
+			RemoteAllowList:   make(map[string]bool),
+			LocalAllowList:    make(map[string]interface{}),
+			RemoteAllowRanges: make(map[string]map[string]bool),
+			AdvertiseAddrs:    []string{},
+			CalculatedRemotes: make(map[string][]CalculatedRemote),
+			DNS: configDNS{
+				Host: "0.0.0.0",
+				Port: 53,
+			},
 		},
 		Listen: configListen{
-			Host:  "[::]",
-			Port:  4242,
-			Batch: 64,
+			Host:          "[::]",
+			Port:          4242,
+			Batch:         64,
+			ReadBuffer:    10485760, // 10MB
+			WriteBuffer:   10485760, // 10MB
+			SendRecvError: "always",
 		},
+		Routines: 1,
 		Punchy: configPunchy{
-			Punch: true,
-			Delay: "1s",
-		},
-		Relay: configRelay{
-			UseRelays: true,
+			Punch:        true,
+			Respond:      false,
+			Delay:        "1s",
+			RespondDelay: "5s",
 		},
 		Cipher: "aes",
-		SSHD: configSSHD{
-			AuthorizedUsers: []configAuthorizedUser{},
+		SSHD:   configSSHD{
+			// Enabled:         false,
+			// Listen:          "127.0.0.1:2222",
+			// HostKey:         "",
+			// AuthorizedUsers: []configAuthorizedUser{},
+			// TrustedCAs:      []string{},
 		},
 		Tun: configTun{
-			Dev:                "tun1",
-			DropLocalBroadcast: true,
-			DropMulticast:      true,
-			TxQueue:            500,
-			MTU:                1300,
-			Routes:             []configRoute{},
-			UnsafeRoutes:       []configUnsafeRoute{},
+			Disabled:            false,
+			Dev:                 "nebula1",
+			DropLocalBroadcast:  false,
+			DropMulticast:       false,
+			TxQueue:             500,
+			MTU:                 1300,
+			Routes:              []configRoute{},
+			UnsafeRoutes:        []configUnsafeRoute{},
+			UseSystemRouteTable: false,
 		},
 		Logging: configLogging{
-			Level:  "info",
-			Format: "text",
+			Level:            "info",
+			Format:           "text",
+			DisableTimestamp: false,
+			TimestampFormat:  "2006-01-02T15:04:05Z07:00",
 		},
-		Stats: configStats{},
+		Stats: configStats{
+			// Type:              "prometheus",
+			// Listen:            "127.0.0.1:8080",
+			// Path:              "/metrics",
+			// Namespace:         "prometheusns",
+			// Subsystem:         "nebula",
+			// Interval:          "10s",
+			// MessageMetrics:    false,
+			// LighthouseMetrics: false,
+		},
 		Handshakes: configHandshakes{
-			TryInterval: "100ms",
-			Retries:     20,
+			TryInterval:   "100ms",
+			Retries:       20,
+			QueryBuffer:   64,
+			TriggerBuffer: 64,
 		},
 		Firewall: configFirewall{
+			OutboundAction:      "drop",
+			InboundAction:       "drop",
+			DefaultLocalCIDRAny: false,
 			ConnTrack: configConnTrack{
-				TcpTimeout:     "120h",
+				TcpTimeout:     "12m",
 				UdpTimeout:     "3m",
 				DefaultTimeout: "10m",
 			},
@@ -492,7 +536,19 @@ func NewConfig() *Configuration {
 					Host:  "any",
 				},
 			},
-			Inbound: []configFirewallRule{},
+			Inbound: []configFirewallRule{
+				// Allow icmp between any nebula hosts
+				{
+					Port:  "any",
+					Proto: "icmp",
+					Host:  "any",
+				},
+			},
+		},
+		Relay: configRelay{
+			AmRelay:   false,
+			UseRelays: true,
+			Relays:    []string{},
 		},
 	}
 }

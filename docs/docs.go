@@ -191,40 +191,7 @@ const docTemplate = `{
                     }
                 }
             },
-            "delete": {
-                "description": "Delete a host by ID",
-                "tags": [
-                    "hosts"
-                ],
-                "summary": "Delete a host",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Host ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Delete status",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "boolean"
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/api.errorResponse"
-                        }
-                    }
-                }
-            },
-            "patch": {
+            "put": {
                 "description": "Update the details of an existing host",
                 "consumes": [
                     "application/json"
@@ -265,6 +232,80 @@ const docTemplate = `{
                         "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/api.errorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.errorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Delete a host by ID",
+                "tags": [
+                    "hosts"
+                ],
+                "summary": "Delete a host",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Host ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Delete status",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "boolean"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.errorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/hosts/{id}/config.yml": {
+            "get": {
+                "description": "Retrieve the YAML configuration of a single host by its ID. Optionally, download the configuration as a file.",
+                "produces": [
+                    "application/x-yaml"
+                ],
+                "tags": [
+                    "hosts"
+                ],
+                "summary": "Get a host's configuration in YAML format",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Host ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Set this parameter to trigger file download (e.g., ?download=true)",
+                        "name": "download",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
                         }
                     },
                     "404": {
@@ -668,9 +709,6 @@ const docTemplate = `{
                         }
                     ]
                 },
-                "localRange": {
-                    "type": "string"
-                },
                 "logging": {
                     "$ref": "#/definitions/models.configLogging"
                 },
@@ -684,8 +722,13 @@ const docTemplate = `{
                 },
                 "preferredRanges": {
                     "description": "Preferred ranges is used to define a hint about the local network ranges, which speeds up discovering the fastest\npath to a network adjacent nebula node.\nThis setting is reloadable.",
-                    "type": "string",
-                    "example": "172.16.0.0/24"
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "172.16.0.0/24"
+                    ]
                 },
                 "punchy": {
                     "$ref": "#/definitions/models.configPunchy"
@@ -711,16 +754,6 @@ const docTemplate = `{
                         }
                     ]
                 },
-                "staticHostmap": {
-                    "description": "The static host map defines a set of hosts with fixed IP addresses on the internet (or any network).\nA host can have multiple fixed IP addresses defined here, and nebula will try each when establishing a tunnel.\nThe syntax is:\n\"{nebula ip}\": [\"{routable ip/dns name}:{routable port}\"]\nExample, if your lighthouse has the nebula IP of 192.168.100.1 and has the real ip address of 100.64.22.11 and runs on port 4242:",
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "array",
-                        "items": {
-                            "type": "string"
-                        }
-                    }
-                },
                 "staticMap": {
                     "description": "The static_map config stanza can be used to configure how the static_host_map behaves.",
                     "allOf": [
@@ -745,11 +778,8 @@ const docTemplate = `{
         "models.Host": {
             "type": "object",
             "properties": {
-                "certificates": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.Certificate"
-                    }
+                "certificate": {
+                    "$ref": "#/definitions/models.Certificate"
                 },
                 "configuration": {
                     "$ref": "#/definitions/models.Configuration"
@@ -771,12 +801,6 @@ const docTemplate = `{
                 },
                 "ip": {
                     "type": "string"
-                },
-                "isLighthouse": {
-                    "type": "boolean"
-                },
-                "listenPort": {
-                    "type": "integer"
                 },
                 "name": {
                     "type": "string"
@@ -827,14 +851,6 @@ const docTemplate = `{
                 "ip": {
                     "type": "string",
                     "example": "100.100.0.1/24"
-                },
-                "isLighthouse": {
-                    "type": "boolean",
-                    "example": false
-                },
-                "listenPort": {
-                    "type": "integer",
-                    "example": 4242
                 },
                 "name": {
                     "type": "string",
@@ -1140,18 +1156,25 @@ const docTemplate = `{
                 },
                 "group": {
                     "description": "Specific group to match",
-                    "type": "string"
+                    "type": "string",
+                    "example": "laptop"
                 },
                 "groups": {
                     "description": "Multiple groups to match (AND logic)",
                     "type": "array",
                     "items": {
                         "type": "string"
-                    }
+                    },
+                    "example": [
+                        "laptop",
+                        "servers",
+                        "ssh"
+                    ]
                 },
                 "host": {
                     "description": "Specific host to match",
-                    "type": "string"
+                    "type": "string",
+                    "example": "any"
                 },
                 "localCIDR": {
                     "description": "Local CIDR for unsafe routes",
@@ -1229,16 +1252,6 @@ const docTemplate = `{
                         {
                             "$ref": "#/definitions/models.configDNS"
                         }
-                    ]
-                },
-                "hosts": {
-                    "description": "Hosts is a list of lighthouse hosts this node should report to and query from.\nIMPORTANT: THIS SHOULD BE EMPTY ON LIGHTHOUSE NODES\nIMPORTANT2: THIS SHOULD BE LIGHTHOUSES' NEBULA IPs, NOT LIGHTHOUSES' REAL ROUTABLE IPs",
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    },
-                    "example": [
-                        "192.168.100.1"
                     ]
                 },
                 "interval": {
@@ -1452,7 +1465,7 @@ const docTemplate = `{
                 "enabled": {
                     "description": "Enabled toggles the SSHD feature, allowing SSH access to the node for administrative and debugging tasks.",
                     "type": "boolean",
-                    "example": true
+                    "example": false
                 },
                 "hostKey": {
                     "description": "HostKey specifies the file path to the private key used for SSH host identification.",

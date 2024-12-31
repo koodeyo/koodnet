@@ -51,8 +51,9 @@ func NewRouter(l *logrus.Logger) *gin.Engine {
 			hosts.GET("/", FindHosts)
 			hosts.POST("/", CreateHost)
 			hosts.GET("/:id", FindHost)
-			hosts.PATCH("/:id", UpdateHost)
+			hosts.PUT("/:id", UpdateHost)
 			hosts.DELETE("/:id", DeleteHost)
+			hosts.GET("/:id/config.yml", FindHostYamlConfig)
 		}
 
 		// Certificate routes

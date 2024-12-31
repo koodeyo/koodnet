@@ -22,7 +22,7 @@ func FindNetworks(c *gin.Context) {
 	var networks []models.Network
 
 	// Fetch data from the database
-	database.Conn.Model(&models.Network{}).Scopes(models.Paginate(c)).Preload("Ca").Preload("Hosts").Find(&networks)
+	database.Conn.Model(&models.Network{}).Scopes(models.Paginate(c)).Find(&networks)
 
 	response := paginated(networks, c)
 
@@ -43,7 +43,7 @@ func FindNetworks(c *gin.Context) {
 func CreateNetwork(c *gin.Context) {
 	var dto models.NetworkDto
 
-	// Validate the p
+	// Validate the payload
 	if err := c.ShouldBindJSON(&dto); err != nil {
 		c.JSON(http.StatusBadRequest, errorResponse{
 			Errors: []apiError{
@@ -114,7 +114,7 @@ func FindNetwork(c *gin.Context) {
 	var network models.Network
 
 	// Attempt to find the network
-	if err := database.Conn.First(&network, "id = ?", id).Error; err != nil {
+	if err := database.Conn.Preload("Ca").Preload("Hosts").First(&network, "id = ?", id).Error; err != nil {
 		dbErrorHandler(err, c)
 		return
 	}

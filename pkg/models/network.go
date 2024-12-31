@@ -1,6 +1,7 @@
 package models
 
 import (
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -44,7 +45,6 @@ type NetworkDto struct {
 
 func (n *Network) ValidCAs() []Certificate {
 	var validCAs []Certificate
-
 	for _, ca := range n.Ca {
 		if ca.Expired() {
 			continue
@@ -54,6 +54,15 @@ func (n *Network) ValidCAs() []Certificate {
 	}
 
 	return validCAs
+}
+
+func (n *Network) MarshalCAs() string {
+	var builder strings.Builder
+	for _, ca := range n.Ca {
+		builder.WriteString(string(ca.Crt))
+	}
+
+	return builder.String()
 }
 
 // Hooks
