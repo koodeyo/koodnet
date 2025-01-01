@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"dario.cat/mergo"
@@ -22,7 +23,8 @@ type Host struct {
 	InPub           []byte         `json:"inPub,omitempty" swaggertype:"string"`
 	NetworkID       uuid.UUID      `json:"networkId" gorm:"type:uuid"`
 	Network         *Network       `json:"network,omitempty"`
-	Configuration   *Configuration `json:"configuration,omitempty" gorm:"constraint:OnDelete:CASCADE"`
+	ConfigurationID uuid.UUID      `json:"configurationId" gorm:"type:uuid"`
+	Configuration   *Configuration `json:"configuration,omitempty" gorm:"foreignKey:ConfigurationID;constraint:OnDelete:CASCADE"`
 	Certificate     *Certificate   `json:"certificate,omitempty" gorm:"polymorphic:Owner;constraint:OnDelete:CASCADE"`
 	CreatedAt       time.Time      `json:"createdAt" gorm:"autoCreateTime"`
 	UpdatedAt       time.Time      `json:"updatedAt" gorm:"autoUpdateTime"`
@@ -37,6 +39,10 @@ type HostDto struct {
 	Groups          []string       `json:"groups,omitempty" example:"laptop,servers,ssh"`
 	NetworkID       uuid.UUID      `json:"networkId,omitempty" example:"c6d6c4c4-b65b-40e1-bcf2-1fd3122c653d"`
 	Configuration   *Configuration `json:"configuration,omitempty"`
+}
+
+func (h *Host) GetIp() string {
+	return strings.Split(h.IP, "/")[0]
 }
 
 func (h *Host) BeforeCreate(db *gorm.DB) error {

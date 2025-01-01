@@ -22,6 +22,10 @@ func FindHosts(c *gin.Context) {
 	var hosts []models.Host
 
 	// Fetch data from the database with pagination
+
+	// TODO: filter lighthouse and relays
+	// db.Joins("Configuration").Where("configuration.lighthouse_am_lighthouse = ?", true).Find(&hosts)
+
 	database.Conn.Model(&models.Host{}).Preload("Configuration").Scopes(models.Paginate(c)).Find(&hosts)
 
 	response := paginated(hosts, c)
@@ -158,6 +162,7 @@ func UpdateHost(c *gin.Context) {
 	dto.ID = host.ID
 	if hasCfg {
 		dto.Configuration.ID = host.Configuration.ID
+		dto.ConfigurationID = host.ConfigurationID
 	}
 
 	// Update the host
@@ -187,7 +192,7 @@ func FindHostYamlConfig(c *gin.Context) {
 	download := c.Query("download")
 	var host models.Host
 
-	if err := database.Conn.Preload("Configuration").Preload("Certificate").Preload("Network.Ca").First(&host, "id = ?", id).Error; err != nil {
+	if err := database.Conn.Scopes(models.PreloadHostWithFullDetails(id)).First(&host).Error; err != nil {
 		dbErrorHandler(err, c)
 		return
 	}

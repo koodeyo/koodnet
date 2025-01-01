@@ -20,7 +20,7 @@ type Configuration struct {
 	// The static_map config stanza can be used to configure how the static_host_map behaves.
 	StaticMap configStaticMap `yaml:"static_map,omitempty" json:"staticMap" gorm:"serializer:json"`
 
-	Lighthouse configLighthouse `yaml:"lighthouse,omitempty" json:"lighthouse" gorm:"serializer:json"`
+	Lighthouse configLighthouse `yaml:"lighthouse,omitempty" json:"lighthouse" gorm:"embedded;embeddedPrefix:lighthouse_"`
 
 	// Port Nebula will be listening on. The default here is 4242. For a lighthouse node, the port should be defined,
 	// however using port 0 will dynamically assign a port and is recommended for roaming nodes.
@@ -61,7 +61,7 @@ type Configuration struct {
 	Firewall configFirewall `yaml:"firewall,omitempty" json:"firewall" gorm:"serializer:json"`
 
 	// EXPERIMENTAL: relay support for networks that can't establish direct connections.
-	Relay configRelay `yaml:"relay,omitempty" json:"relay" gorm:"serializer:json"`
+	Relay configRelay `yaml:"relay,omitempty" json:"relay" gorm:"embedded;embeddedPrefix:relay_"`
 
 	// Non Nebula Fields
 	ID        uuid.UUID `yaml:"-" json:"id" gorm:"type:uuid;primary_key;" swaggerignore:"true"`
@@ -113,7 +113,7 @@ type configLighthouse struct {
 	ServeDNS bool `yaml:"serve_dns" json:"serveDns" example:"false"`
 
 	// DNS holds the DNS configuration for this node.
-	DNS configDNS `yaml:"dns,omitempty" json:"dns"`
+	DNS configDNS `yaml:"dns,omitempty" json:"dns" gorm:"serializer:json"`
 
 	// Interval is the number of seconds between updates from this node to a lighthouse.
 	// During updates, a node sends information about its current IP addresses to each node.
@@ -122,27 +122,27 @@ type configLighthouse struct {
 	// Hosts is a list of lighthouse hosts this node should report to and query from.
 	// IMPORTANT: THIS SHOULD BE EMPTY ON LIGHTHOUSE NODES
 	// IMPORTANT2: THIS SHOULD BE LIGHTHOUSES' NEBULA IPs, NOT LIGHTHOUSES' REAL ROUTABLE IPs
-	Hosts []string `yaml:"hosts,omitempty" json:"-" example:"192.168.100.1"`
+	Hosts []string `yaml:"hosts,omitempty" json:"-" example:"192.168.100.1" gorm:"serializer:json"`
 
 	// RemoteAllowList is a map of remote hosts that are allowed to communicate with this node.
 	// The key is the host's IP address, and the value is a boolean indicating if it's allowed.
-	RemoteAllowList map[string]bool `yaml:"remote_allow_list,omitempty" json:"remoteAllowList" example:"172.16.0.0/12:true,0.0.0.0/0:false"`
+	RemoteAllowList map[string]bool `yaml:"remote_allow_list,omitempty" json:"remoteAllowList" example:"172.16.0.0/12:true,0.0.0.0/0:false" gorm:"serializer:json"`
 
 	// LocalAllowList is a map of local hosts that are allowed to communicate with this node.
 	// The key is the host's IP address, and the value is an arbitrary interface{} for future extensibility.
-	LocalAllowList map[string]interface{} `yaml:"local_allow_list,omitempty" json:"localAllowList"`
+	LocalAllowList map[string]interface{} `yaml:"local_allow_list,omitempty" json:"localAllowList" gorm:"serializer:json"`
 
 	// RemoteAllowRanges defines more specific remote IP rules for VPN CIDR ranges.
 	// This feature is experimental and may change in the future.
-	RemoteAllowRanges map[string]map[string]bool `yaml:"remote_allow_ranges,omitempty" json:"remoteAllowRanges"`
+	RemoteAllowRanges map[string]map[string]bool `yaml:"remote_allow_ranges,omitempty" json:"remoteAllowRanges" gorm:"serializer:json"`
 
 	// AdvertiseAddrs are routable addresses that will be included with discovered addresses to report to the lighthouse.
 	// This is mainly used for static IPs or port forwarding scenarios where Nebula might not automatically discover them.
-	AdvertiseAddrs []string `yaml:"advertise_addrs,omitempty" json:"advertiseAddrs" example:"1.1.1.1:4242,1.2.3.4:0"`
+	AdvertiseAddrs []string `yaml:"advertise_addrs,omitempty" json:"advertiseAddrs" example:"1.1.1.1:4242,1.2.3.4:0" gorm:"serializer:json"`
 
 	// CalculatedRemotes is an experimental feature that allows for "guessing" the remote IPs based on Nebula IPs,
 	// while waiting for the lighthouse response.
-	CalculatedRemotes map[string][]CalculatedRemote `yaml:"calculated_remotes,omitempty" json:"calculatedRemotes"`
+	CalculatedRemotes map[string][]CalculatedRemote `yaml:"calculated_remotes,omitempty" json:"calculatedRemotes" gorm:"serializer:json"`
 }
 
 // configDNS defines the DNS settings for a lighthouse node.
@@ -429,7 +429,7 @@ type configRelay struct {
 
 	// List of Nebula IPs that peers can use to relay packets to this instance.
 	// IPs in this list must have am_relay set to true in their configs, or they will reject relay requests.
-	Relays []string `yaml:"relays,omitempty" json:"relays" example:"192.168.100.1"`
+	Relays []string `yaml:"relays,omitempty" json:"relays" example:"192.168.100.1" gorm:"serializer:json"`
 }
 
 func newConfig() *Configuration {
@@ -443,10 +443,10 @@ func newConfig() *Configuration {
 			Blacklist:         []string{},
 		},
 		StaticHostMap: make(map[string][]string),
-		StaticMap:     configStaticMap{
-			// Cadence:       "30s",
-			// Network:       "ip4",
-			// LookupTimeout: "250ms",
+		StaticMap: configStaticMap{
+			Cadence:       "30s",
+			Network:       "ip4",
+			LookupTimeout: "250ms",
 		},
 		PreferredRanges: []string{},
 		Lighthouse: configLighthouse{
@@ -480,12 +480,12 @@ func newConfig() *Configuration {
 			RespondDelay: "5s",
 		},
 		Cipher: "aes",
-		SSHD:   configSSHD{
-			// Enabled:         false,
-			// Listen:          "127.0.0.1:2222",
-			// HostKey:         "",
-			// AuthorizedUsers: []configAuthorizedUser{},
-			// TrustedCAs:      []string{},
+		SSHD: configSSHD{
+			Enabled:         false,
+			Listen:          "127.0.0.1:2222",
+			HostKey:         "",
+			AuthorizedUsers: []configAuthorizedUser{},
+			TrustedCAs:      []string{},
 		},
 		Tun: configTun{
 			Disabled:            false,
@@ -505,14 +505,14 @@ func newConfig() *Configuration {
 			TimestampFormat:  "2006-01-02T15:04:05Z07:00",
 		},
 		Stats: configStats{
-			// Type:              "prometheus",
-			// Listen:            "127.0.0.1:8080",
-			// Path:              "/metrics",
-			// Namespace:         "prometheusns",
-			// Subsystem:         "nebula",
-			// Interval:          "10s",
-			// MessageMetrics:    false,
-			// LighthouseMetrics: false,
+			Type:              "prometheus",
+			Listen:            "127.0.0.1:8080",
+			Path:              "/metrics",
+			Namespace:         "prometheusns",
+			Subsystem:         "nebula",
+			Interval:          "10s",
+			MessageMetrics:    false,
+			LighthouseMetrics: false,
 		},
 		Handshakes: configHandshakes{
 			TryInterval:   "100ms",
