@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"dario.cat/mergo"
 	"github.com/google/uuid"
 	"gopkg.in/yaml.v2"
 	"gorm.io/gorm"
@@ -56,9 +55,7 @@ func (h *Host) BeforeCreate(db *gorm.DB) error {
 	}
 
 	// Save default host config
-	if h.Configuration != nil {
-		mergo.Merge(h.Configuration, newConfig(), mergo.WithOverride, mergo.WithAppendSlice, mergo.WithOverrideEmptySlice)
-	} else {
+	if h.Configuration == nil {
 		h.Configuration = newConfig()
 	}
 
@@ -80,16 +77,27 @@ func (h *Host) Marshal(yml bool) (string, error) {
 	}
 
 	cfg := h.Configuration
-	if err := mergo.Merge(cfg, newConfig(),
-		mergo.WithOverride,
-		mergo.WithOverrideEmptySlice); err != nil {
-		return "", fmt.Errorf("failed to merge config: %w", err)
-	}
+	// if err := mergo.Merge(cfg, newConfig(), mergo.WithOverride, mergo.WithOverrideEmptySlice); err != nil {
+	// 	return "", fmt.Errorf("failed to merge config: %w", err)
+	// }
 
-	// Update PKI configuration
-	cfg.PKI.CA = h.Network.MarshalCAs()
+	// PKI configuration
+	cfg.PKI.CA = h.Network.CAs()
 	cfg.PKI.Cert = string(h.Certificate.Crt)
 	cfg.PKI.Key = string(h.Certificate.Key)
+
+	// Static host-map
+	cfg.StaticHostMap = h.Network.StaticHostMap()
+
+	// config lighthouse hosts
+	if !cfg.Lighthouse.AmLighthouse {
+		cfg.Lighthouse.Hosts = h.Network.Lighthouses()
+	}
+
+	// Config relays
+	if !cfg.Relay.AmRelay && cfg.Relay.UseRelays {
+		cfg.Relay.Relays = h.Network.Relays()
+	}
 
 	var (
 		cfgBytes []byte

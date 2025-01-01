@@ -1,10 +1,12 @@
 package models
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/koodeyo/koodnet/internal"
 	"gorm.io/gorm"
 )
 
@@ -56,13 +58,51 @@ func (n *Network) ValidCAs() []Certificate {
 	return validCAs
 }
 
-func (n *Network) MarshalCAs() string {
+func (n *Network) CAs() string {
 	var builder strings.Builder
 	for _, ca := range n.Ca {
 		builder.WriteString(string(ca.Crt))
 	}
 
 	return builder.String()
+}
+
+func (n *Network) StaticHostMap() map[string][]string {
+	hostMap := make(map[string][]string)
+
+	for _, host := range n.Hosts {
+		if len(host.StaticAddresses) > 0 && host.Configuration.Lighthouse.AmLighthouse || host.Configuration.Relay.AmRelay {
+			hostMap[host.GetIp()] = internal.MapValues(host.StaticAddresses, func(addr string) string {
+				return fmt.Sprintf("%v:%v", addr, host.Configuration.Listen.Port)
+			})
+		}
+	}
+
+	return hostMap
+}
+
+func (n *Network) Lighthouses() []string {
+	var hosts []string
+
+	for _, host := range n.Hosts {
+		if host.Configuration.Lighthouse.AmLighthouse {
+			hosts = append(hosts, host.GetIp())
+		}
+	}
+
+	return hosts
+}
+
+func (n *Network) Relays() []string {
+	var hosts []string
+
+	for _, host := range n.Hosts {
+		if host.Configuration.Relay.AmRelay {
+			hosts = append(hosts, host.GetIp())
+		}
+	}
+
+	return hosts
 }
 
 // Hooks

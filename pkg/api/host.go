@@ -20,13 +20,11 @@ import (
 // @Router /hosts [get]
 func FindHosts(c *gin.Context) {
 	var hosts []models.Host
-
-	// Fetch data from the database with pagination
-
 	// TODO: filter lighthouse and relays
 	// db.Joins("Configuration").Where("configuration.lighthouse_am_lighthouse = ?", true).Find(&hosts)
 
-	database.Conn.Model(&models.Host{}).Preload("Configuration").Scopes(models.Paginate(c)).Find(&hosts)
+	// Fetch data from the database with pagination
+	database.Conn.Model(&models.Host{}).Scopes(models.Paginate(c)).Find(&hosts)
 
 	response := paginated(hosts, c)
 
